@@ -64,10 +64,6 @@
                             @if ($currentMember->characters->count())
                                 <div class="dropdown-divider"></div>
                             @endif
-
-                            <a class="dropdown-item text-muted" href="{{ route('guild.loot.wishlist', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
-                                Sitewide wishlists
-                            </a>
                         </div>
                     </li>
                 </li>

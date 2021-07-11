@@ -171,7 +171,7 @@ If note, response, public note, or officer note are equal to 'OS', offspec flag 
                             <select name="raid_group_id" class="form-control dark">
                                 <option value="">—</option>
                                 @foreach ($guild->raidGroups as $raidGroup)
-                                    <option value="{{ $raidGroup->id }}" style="color:{{ $raidGroup->getColor() }};">
+                                    <option value="{{ $raidGroup->id }}" style="color:{{ $raidGroup->getColor() }};" selected>
                                         {{ $raidGroup->name }}
                                     </option>
                                 @endforeach
@@ -410,24 +410,24 @@ If note, response, public note, or officer note are equal to 'OS', offspec flag 
                                 <div class="checkbox">
                                     <label class="text-muted">
                                         <input type="checkbox" name="skip_missing_characters" value="1" class="" autocomplete="off"
-                                            {{ (old('skip_missing_characters') && old('skip_missing_characters') == 1) ? 'checked' : '' }}>
+                                            {{ (old('skip_missing_characters') && old('skip_missing_characters') == 1) ? 'checked' : 'checked' }}>
                                             Skip items that don't have a character <abbr title="useful for ignoring characters that aren't in your guild when importing data">?</abbr>
                                     </label>
                                 </div>
-                                <div class="checkbox">
+                                {{--<div class="checkbox">
                                     <label class="text-muted">
                                         <input type="checkbox" name="delete_wishlist_items" value="1" class="" autocomplete="off"
                                             {{ (old('delete_wishlist_items') && old('delete_wishlist_items') == 1) || (!old('delete_wishlist_items') && $guild->is_wishlist_autopurged) ? 'checked' : '' }}>
                                             Delete assigned items from each character's wishlist <abbr title="if unchecked, corresponding wishlist items will be flagged as received but still be visible">?</abbr>
                                     </label>
-                                </div>
-                                <div class="checkbox">
+                                </div>--}}
+                                {{--<div class="checkbox">
                                     <label class="text-muted">
                                         <input type="checkbox" name="delete_prio_items" value="1" class="" autocomplete="off"
                                             {{ (old('delete_prio_items') && old('delete_prio_items') == 1) || (!old('delete_prio_items') && $guild->is_prio_autopurged) ? 'checked' : '' }}>
                                             Delete assigned items from each character's prio list <abbr title="if unchecked, corresponding prio will be flagged as received but still be visible">?</abbr>
                                     </label>
-                                </div>
+                                </div>--}}
                             </div>
                         </div>
                     </div>

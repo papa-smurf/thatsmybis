@@ -2,7 +2,7 @@
 
 namespace App;
 
-use App\{Item, Guild, Member, Raid, RaidGroup};
+use App\{CharacterItem, Item, Guild, Member, Raid, RaidGroup};
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -95,6 +95,14 @@ class Character extends Model
         return $this->belongsToMany(RaidGroup::class, 'character_raid_groups', 'character_id', 'raid_group_id');
     }
 
+	public function items() {
+        return $this->hasMany(CharacterItem::class);
+    }
+
+	public function unReceiveditems() {
+        return $this->hasMany(CharacterItem::class)->where('is_received', 0);
+    }
+	
     public function raids() {
         return $this->belongsToMany(Raid::class, 'raid_characters', 'character_id', 'raid_id')
             ->orderByDesc('raids.date')

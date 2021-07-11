@@ -1,1 +1,263 @@
-var table=null,colSource=0,colName=1,colPrios=2,colWishlist=3,colReceived=4,colNotes=5,colPriority=6,lastSource=null;function createTable(a){return memberTable=$("#itemTable").DataTable({autoWidth:!1,data:items,columns:[{title:'<span class="fas fa-fw fa-skull-crossbones"></span> Boss',data:"",render:function render(a,t,e){return e.source_name&&(thisSource=e.source_name),'\n                    <ul class="no-bullet no-indent mb-0">\n                        '.concat(e.source_name?'\n                            <li>\n                                <span class="font-weight-bold">\n                                    '.concat(e.source_name,"\n                                </span>\n                            </li>"):"","\n                    </ul>")},visible:!0,width:"130px",className:"text-right"},{title:'<span class="fas fa-fw fa-sack text-success"></span> Loot',data:"",render:function render(a,t,e){return getItemLink(e)},visible:!0,width:"330px"},{title:'<span class="fas fa-fw fa-sort-amount-down text-gold"></span> Prio\'s',data:guild.is_attendance_hidden?"priod_characters":"priod_characters_with_attendance",render:function render(a,t,e){return a&&a.length?getCharacterList(a,"prio",e.item_id):"—"},orderable:!1,visible:!!showPrios,width:"300px"},{title:'<span class="text-legendary fas fa-fw fa-scroll-old"></span> Wishlist',data:guild.is_attendance_hidden?"wishlist_characters":"wishlist_characters_with_attendance",render:function render(a,t,e){return a&&a.length?getCharacterList(a,"wishlist",e.item_id):"—"},orderable:!1,visible:!!showWishlist,width:"400px"},{title:'<span class="text-success fas fa-fw fa-sack"></span> Received',data:"received_and_recipe_characters",render:function render(a,t,e){return a&&a.length?getCharacterList(a,"received",e.item_id):"—"},orderable:!1,visible:!0,width:"300px"},{title:'<span class="fas fa-fw fa-comment-alt-lines"></span> Notes',data:"guild_note",render:function render(a,t,e){return getNotes(e,a)},orderable:!1,visible:!!showNotes,width:"200px"},{title:'<span class="fas fa-fw fa-comment-alt-lines"></span> Prio Notes',data:"guild_priority",render:function render(a,t,e){return a?'<span class="js-markdown-inline">'.concat(nl2br(a),"</span>"):"—"},orderable:!1,visible:!!showNotes,width:"200px"}],order:[],paging:!1,fixedHeader:!0,initComplete:function initComplete(){makeWowheadLinks(),parseMarkdown()},createdRow:function createdRow(t,e,n){0!=n&&null!=a||(a=e.source_name),e.source_name!=a&&($(t).addClass("top-border"),a=e.source_name)}}),memberTable}function getCharacterList(a,t,e){var n='<ul class="list-inline js-item-list mb-0" data-type="'.concat(t,'" data-id="').concat(e,'">'),i=4,c=null;return $.each(a,function(a,e){if("prio"==t&&e.pivot.raid_group_id&&e.pivot.raid_group_id!=c){c=e.pivot.raid_group_id;var i="";if(raidGroups.length){var s=raidGroups.find(function(a){return a.id===e.pivot.raid_group_id});s&&(i=s.name)}n+='\n                <li data-raid-group-id="" class="js-item-wishlist-character no-bullet font-weight-normal font-italic text-muted small">\n                    '.concat(i,"\n                </li>\n            ")}n+='\n            <li data-raid-group-id="'.concat("prio"==t?e.pivot.raid_group_id:e.raid_group_id,'"\n                value="').concat("prio"==t?e.pivot.order:"",'"\n                class="js-item-wishlist-character list-inline-item font-weight-normal mb-1 mr-0 ').concat(e.pivot.received_at?"font-strikethrough":"",'">\n                <a href="/').concat(guild.id,"/").concat(guild.slug,"/c/").concat(e.id,"/").concat(e.slug,'"\n                    title="').concat(e.raid_group_name?e.raid_group_name+" -":""," ").concat(e.level?e.level:""," ").concat(e.race?e.race:""," ").concat(e.spec?e.spec:""," ").concat(e.class?e.class:""," ").concat(e.raid_count?"(".concat(e.raid_count," raid").concat(e.raid_count>1?"s":""," attended)"):""," ").concat(e.username?"("+e.username+")":"",'"\n                    class="tag text-muted d-inline">\n                    <span class="">').concat("received"!==t&&e.pivot.order?e.pivot.order:"",'</span>\n                    <span class="small font-weight-bold">').concat(e.pivot.is_offspec?"OS":"",'</span>\n                    <span class="role-circle" style="background-color:').concat(getColorFromDec(e.raid_group_color),'"></span>\n                    <span class="text-').concat(e.class?e.class.toLowerCase():"",'-important">').concat(e.name,"</span>\n                    ").concat(e.is_alt?'\n                        <span class="text-warning">alt</span>\n                    ':"","\n                    ").concat(guild.is_attendance_hidden||!e.attendance_percentage&&!e.raid_count?"":"".concat(e.raid_count&&"number"==typeof e.attendance_percentage?'<span title="attendance" class="smaller '.concat(getAttendanceColor(e.attendance_percentage),'">').concat(Math.round(100*e.attendance_percentage),"%</span>"):"").concat(e.raid_count?'<span class="smaller">+'.concat(e.raid_count,"</span>"):"","\n                    "),'\n                    <span class="js-watchable-timestamp smaller"\n                        data-timestamp="').concat(e.pivot.created_at,'"\n                        data-is-short="1">\n                    </span>\n                    <span style="display:none;">').concat(e.discord_username," ").concat(e.username,"</span>\n                </a>\n            </li>")}),n+="</ul>"}function getNotes(a,t){var e=null;return t=t?'<span class="js-markdown-inline">'.concat(t?nl2br(t):"","</span>").concat(""):"—"}function getItemLink(a){var t=arguments.length>1&&void 0!==arguments[1]?arguments[1]:null,e='data-wowhead-link="https://'.concat(wowheadSubdomain,".wowhead.com/item=").concat(a.item_id,'"\n    data-wowhead="item=').concat(a.item_id,"?domain=").concat(wowheadSubdomain,'"');t&&(e+=' data-wh-icon-size="'.concat(t,'"'));var n="";return n=guild?"/".concat(guild.id,"/").concat(guild.slug,"/i/").concat(a.item_id,"/").concat(slug(a.name)):"",'\n    <ul class="no-bullet no-indent mb-0">\n        <li>\n            '.concat(guild.tier_mode?'<span class="text-monospace font-weight-medium text-tier-'.concat(a.guild_tier?a.guild_tier:"",'">').concat(a.guild_tier?getItemTierLabel(a,guild.tier_mode):"&nbsp;","</span>"):"",'\n            <a href="').concat(n,'"\n                class="').concat(a.quality?"q"+a.quality:"",'"\n                ').concat(e,">\n                ").concat(a.name,"\n            </a>\n        </li>\n    </ul>")}$(document).ready(function(){table=createTable(),$(".toggle-column").click(function(a){a.preventDefault();var t=table.column($(this).attr("data-column"));t.visible(!t.visible())}),$(".toggle-column-default").click(function(a){a.preventDefault(),table.column(colName).visible(!0),table.column(colPrios).visible(!0),table.column(colWishlist).visible(!0),table.column(colReceived).visible(!0),table.column(colNotes).visible(!0),table.column(colPriority).visible(!0)}),table.on("column-visibility.dt",function(a,t,e,n){makeWowheadLinks(),trackTimestamps(),parseMarkdown()}),$("#raid_group_filter").on("change",function(){var a=$(this).val();a?($(".js-item-wishlist-character[data-raid-group-id!='"+a+"']").hide(),$(".js-item-wishlist-character[data-raid-group-id='"+a+"']").show()):$(".js-item-wishlist-character").show()}).change(),trackTimestamps()});
+var table = null;
+
+var colSource = 0;
+var colName = 1;
+var colPrios = 2;
+var colWishlist = 3;
+var colReceived = 4;
+var colNotes = 5;
+var colPriority = 6;
+
+// For keeping track of the loot's source
+var lastSource = null;
+
+$(document).ready( function () {
+   table = createTable();
+
+   $(".toggle-column").click(function(e) {
+        e.preventDefault();
+        let column = table.column($(this).attr("data-column"));
+        column.visible(!column.visible());
+   });
+
+   $(".toggle-column-default").click(function(e) {
+        e.preventDefault();
+
+        table.column(colName)    .visible(true);
+        table.column(colPrios)   .visible(true);
+        table.column(colWishlist).visible(true);
+        table.column(colReceived).visible(true);
+        table.column(colNotes)   .visible(true);
+        table.column(colPriority).visible(true);
+   });
+
+    // Triggered when a column is made visible
+    table.on('column-visibility.dt', function (e, settings, column, state) {
+        // Refresh wowhead links to show stlying.
+        // wowhead's script previously ignored these links if they weren't visible
+        makeWowheadLinks();
+        trackTimestamps();
+        parseMarkdown();
+    });
+
+    // Filter out characters based on the raid group they are in
+    $("#raid_group_filter").on('change', function () {
+        let raidGroupId = $(this).val();
+
+        if (raidGroupId) {
+            $(".js-item-wishlist-character[data-raid-group-id!='" + raidGroupId + "']").hide();
+            $(".js-item-wishlist-character[data-raid-group-id='" + raidGroupId + "']").show();
+        } else {
+            $(".js-item-wishlist-character").show();
+        }
+    }).change();
+
+    trackTimestamps();
+});
+
+function createTable(lastSource) {
+    memberTable = $("#itemTable").DataTable({
+        "autoWidth" : false,
+        "data"      : items,
+        "columns"   : [
+            {
+                "title"  : '<span class="fas fa-fw fa-skull-crossbones"></span> Boss',
+                "data"   : "",
+                "render" : function (data, type, row) {
+                    if (row.source_name) {
+                        thisSource = row.source_name;
+                    }
+
+                    return `
+                    <ul class="no-bullet no-indent mb-0">
+                        ${ row.source_name ? `
+                            <li>
+                                <span class="font-weight-bold">
+                                    ${ row.source_name }
+                                </span>
+                            </li>` : `` }
+                    </ul>`;
+                },
+                "visible"   : true,
+                "width"     : "130px",
+                "className" : "text-right",
+            },
+            {
+                "title"  : '<span class="fas fa-fw fa-sack text-success"></span> Loot',
+                "data"   : "",
+                "render" : function (data, type, row) {
+                    return getItemLink(row);
+                },
+                "visible" : true,
+                "width"   : "330px",
+            },
+            {
+                "title"  : '<span class="fas fa-fw fa-sort-amount-down text-gold"></span> Prio\'s',
+                "data"   : guild.is_attendance_hidden ? "priod_characters" : "priod_characters_with_attendance",
+                "render" : function (data, type, row) {
+                    return data && data.length ? getCharacterList(data, 'prio', row.item_id) : '—';
+                },
+                "orderable" : false,
+                "visible" : showPrios ? true : false,
+                "width"   : "300px",
+            },
+            {
+                "title"  : '<span class="text-legendary fas fa-fw fa-scroll-old"></span> Wishlist',
+                "data"   : guild.is_attendance_hidden ? "wishlist_characters" : "wishlist_characters_with_attendance",
+                "render" : function (data, type, row) {
+                    return data && data.length ? getCharacterList(data, 'wishlist', row.item_id) : '—';
+                },
+                "orderable" : false,
+                "visible" : showWishlist ? true : false,
+                "width"   : "400px",
+            },
+            {
+                "title"  : '<span class="text-success fas fa-fw fa-sack"></span> Received',
+                "data"   : "received_and_recipe_characters",
+                "render" : function (data, type, row) {
+                    return data && data.length ? getCharacterList(data, 'received', row.item_id) : '—';
+                },
+                "orderable" : false,
+                "visible" : true,
+                "width"   : "300px",
+            },
+            {
+                "title"  : '<span class="fas fa-fw fa-comment-alt-lines"></span> Notes',
+                "data"   : "guild_note",
+                "render" : function (data, type, row) {
+                    return getNotes(row, data);
+                },
+                "orderable" : false,
+                "visible" : showNotes ? true : false,
+                "width"   : "200px",
+            },
+            {
+                "title"  : '<span class="fas fa-fw fa-comment-alt-lines"></span> Prio Notes',
+                "data"   : "guild_priority",
+                "render" : function (data, type, row) {
+                    return (data ? `<span class="js-markdown-inline">${ nl2br(data) }</span>` : '—');
+                },
+                "orderable" : false,
+                "visible" : showNotes ? true : false,
+                "width"   : "200px",
+            },
+        ],
+        "order"       : [], // Disable initial auto-sort; relies on server-side sorting
+        "paging"      : false,
+        "fixedHeader" : true, // Header row sticks to top of window when scrolling down
+        "initComplete": function () {
+            makeWowheadLinks();
+            parseMarkdown();
+        },
+        "createdRow" : function (row, data, dataIndex) {
+            // Add a top border style between different loot sources
+            if (dataIndex == 0 || lastSource == null) {
+                lastSource = data.source_name;
+            }
+            if (data.source_name != lastSource) {
+                $(row).addClass("top-border");
+                lastSource = data.source_name;
+            }
+        }
+    });
+
+    return memberTable;
+}
+
+// Gets an HTML list of characters
+function getCharacterList(data, type, itemId) {
+    let characters = `<ul class="list-inline js-item-list mb-0" data-type="${ type }" data-id="${ itemId }">`;
+    let initialLimit = 4;
+
+    let lastRaidGroupId = null;
+    $.each(data, function (index, character) {
+        if (type == 'prio' && character.pivot.raid_group_id && character.pivot.raid_group_id != lastRaidGroupId) {
+            lastRaidGroupId = character.pivot.raid_group_id;
+            let raidGroupName = '';
+            if (raidGroups.length) {
+                let raidGroup = raidGroups.find(raidGroup => raidGroup.id === character.pivot.raid_group_id);
+                 if (raidGroup) {
+                    raidGroupName = raidGroup.name;
+                }
+            }
+            characters += `
+                <li data-raid-group-id="" class="js-item-wishlist-character no-bullet font-weight-normal font-italic text-muted small">
+                    ${ raidGroupName }
+                </li>
+            `;
+        }
+
+        characters += `
+            <li data-raid-group-id="${ type == 'prio' ? character.pivot.raid_group_id : character.raid_group_id }"
+                value="${ type == 'prio' ? character.pivot.order : '' }"
+                class="js-item-wishlist-character list-inline-item font-weight-normal mb-1 mr-0 ${ character.pivot.received_at ? 'font-strikethrough' : '' }">
+                <a href="/${ guild.id }/${ guild.slug }/c/${ character.id }/${ character.slug }"
+                    title="${ character.raid_group_name ? character.raid_group_name + ' -' : '' } ${ character.level ? character.level : '' } ${ character.race ? character.race : '' } ${ character.spec ? character.spec : '' } ${ character.class ? character.class : '' } ${ character.raid_count ? `(${ character.raid_count } raid${ character.raid_count > 1 ? 's' : '' } attended)` : `` } ${ character.username ? '(' + character.username + ')' : '' }"
+                    class="tag text-muted d-inline">
+                    <span class="">${ type !== 'received' && character.pivot.order ? (character.pivot.order - character.order_modifier).toFixed(1) : '' }</span>
+                    <span class="small font-weight-bold">${ character.pivot.is_offspec ? 'OS' : '' }</span>
+                    <span class="role-circle" style="background-color:${ getColorFromDec(character.raid_group_color) }"></span>
+                    <span class="text-${ character.class ? character.class.toLowerCase() : '' }-important">${ character.name }</span>
+                    ${ character.is_alt ? `
+                        <span class="text-warning">alt</span>
+                    ` : '' }
+                    ${ !guild.is_attendance_hidden && (character.attendance_percentage || character.raid_count) ?
+                        `${ character.raid_count && typeof character.attendance_percentage === 'number' ? `<span title="attendance" class="smaller ${ getAttendanceColor(character.attendance_percentage) }">${ Math.round(character.attendance_percentage * 100) }%</span>` : '' }${ character.raid_count ? `<span class="smaller">+${ character.raid_count }</span>` : ``}
+                    ` : `` }
+                    <span style="display:none;">${ character.discord_username } ${ character.username }</span>
+                </a>
+            </li>`;
+    });
+
+    characters += `</ul>`;
+    return characters;
+}
+
+function getNotes(row, note) {
+    let childItems = null;
+    // Uncomment to show child items
+    // if (row.child_items.length) {
+    //     childItems = '<ul class="list-inline">';
+    //     row.child_items.forEach(function (item, index) {
+    //         item.quality = 0;
+    //         childItems += `<li class="list-inline-item smaller">${ getItemLink(item, ' ') }</li>`;
+    //     });
+    //     childItems += '</ul>';
+    // }
+    if (note || childItems) {
+        note = `<span class="js-markdown-inline">${ note ? nl2br(note) : '' }</span>${ childItems ? childItems : '' }`;
+    } else {
+        note = '—';
+    }
+    return note;
+}
+
+function getItemLink(row, iconSize = null) {
+    let wowheadData =
+    `data-wowhead-link="https://${ wowheadSubdomain }.wowhead.com/item=${ row.item_id }"
+    data-wowhead="item=${ row.item_id }?domain=${ wowheadSubdomain }"`;
+
+    if (iconSize) {
+        wowheadData += ` data-wh-icon-size="${ iconSize }"`;
+    }
+
+    let url = "";
+    if (guild) {
+        url = `/${ guild.id }/${ guild.slug }/i/${ row.item_id }/${ slug(row.name) }`;
+    } else {
+        url = "";
+    }
+    return `
+    <ul class="no-bullet no-indent mb-0">
+        <li>
+            ${ guild.tier_mode ?
+                `<span class="text-monospace font-weight-medium text-tier-${ row.guild_tier ? row.guild_tier : '' }">${ row.guild_tier ? getItemTierLabel(row, guild.tier_mode) : '&nbsp;' }</span>`
+            : `` }
+            <a href="${ url }"
+                class="${ row.quality ? 'q' + row.quality : '' }"
+                ${ wowheadData }>
+                ${ row.name }
+            </a>
+        </li>
+    </ul>`;
+}

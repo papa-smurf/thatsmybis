@@ -113,8 +113,102 @@ class ExportController extends Controller {
         return $this->getExport($characters['characters'], 'Character JSON', $fileType);
     }
 
+	/**
+     * Export a guild's wishlist data for the Gargul addon
+     *
+     * @return \Illuminate\Http\Response
+     */
+	public function gargulWishlistJson()
+	{
+		$guild = request()->get('guild');
+        $currentMember = request()->get('currentMember');
+		$viewPrioPermission = $currentMember->hasPermission('view.prios');
+
+		if ($guild->is_prio_private && !$viewPrioPermission) {
+            throw new \Exception('Insufficient permission to export loot data for Gargul');
+        }
+
+		$characters = $guild->characters()
+			->has('unReceiveditems')
+			->with([
+				'unReceiveditems' => function ($query) {
+					return $query->select('character_id', 'item_id', 'order', 'is_offspec');
+				},
+				'unReceiveditems.item' => function ($query) {
+					return $query->select('item_id', 'name');
+				}
+			])
+			->select('id', 'name', 'order_modifier')
+			->get();
+
+		$wishlistData = [];
+		foreach ($characters as $character) {
+			$characterOrderModifier = $character->order_modifier ?? 0;
+			
+			foreach ($character->unReceiveditems as $item) {
+				$itemId = $item->item->item_id;
+				$characterName = mb_strtolower($character->name);
+				$itemName = mb_strtolower($item->item->name);
+
+				if (!isset($wishlistData[$itemId])) {
+					$wishlistData[$itemId] = [
+						'name' => $itemName,
+						'characters' => [],
+					];
+				}
+
+				$wishlistData[$itemId]['characters'][] = sprintf(
+					'%s%s|%s',
+					$characterName,
+					$item->is_offspec ? '(OS)' : '',
+					$item->order - $characterOrderModifier
+				);
+			}
+		}
+
+		$items = \App\GuildItem::whereNotNull('priority')
+			->where('guild_id', $guild->id)
+			->select('item_id', 'priority')
+			->get();
+
+		$itemPriorities = [];
+		foreach ($items as $item) {
+			$itemPriorities[$item->item_id] = $item->priority;
+		};
+
+		return $this->getExport(json_encode($wishlistData, JSON_UNESCAPED_UNICODE), 'Gargul data', self::HTML);
+	}
+	
+	/**
+     * Export a guild's wishlist data for the Gargul addon
+     *
+     * @return \Illuminate\Http\Response
+     */
+	public function gargulLootPriorityCSV()
+	{
+		$guild = request()->get('guild');
+        $currentMember = request()->get('currentMember');
+		$viewPrioPermission = $currentMember->hasPermission('view.prios');
+
+		if ($guild->is_prio_private && !$viewPrioPermission) {
+            throw new \Exception('Insufficient permission to export loot data for Gargul');
+        }
+
+		$items = \App\GuildItem::whereNotNull('priority')
+			->where('guild_id', $guild->id)
+			->select('item_id', 'priority')
+			->get();
+
+		$itemPriorityString = "";
+		foreach ($items as $item) {
+			$itemPriorityString .= "{$item->item_id} > {$item->priority}\n";
+		};
+
+		return $this->getExport($itemPriorityString, 'Gargul data', self::HTML);
+	}
+	
     /**
-     * Export an expansion's loot tables
+     * Export an expansion's loot tablesS
      *
      * @return \Illuminate\Http\Response
      */

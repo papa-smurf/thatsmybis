@@ -47,10 +47,10 @@ class LoginController extends Controller
             ->setScopes(['identify', 'guilds']) // If changing these scopes, update the call to refresh a user's access (search 'refresh_token')
             // Don't prompt the user to accept our app's usage of their Discord profile EVERY time (only on first signup)
             // https://discord.com/developers/docs/topics/oauth2#authorization-code-grant-authorization-url-example
-            ->with(['prompt' => 'none'])
+            //->with(['prompt' => 'none'])
             ->redirect();
     }
-
+	
     /**
      * Obtain the user information from Discord.
      *
@@ -61,6 +61,7 @@ class LoginController extends Controller
         try {
             $unauthUser = Socialite::driver('discord')->user();
         } catch (Exception $e) {
+			throw $e;
             return redirect('auth/discord');
         }
 
@@ -69,8 +70,6 @@ class LoginController extends Controller
         if (!$id) {
             abort(403, "Didn't receive your ID from Discord. Try again.");
         }
-
-        $discord = new DiscordClient(['token' => env('DISCORD_BOT_TOKEN')]);
 
         $authUser = $this->findUser($unauthUser, 'discord');
 

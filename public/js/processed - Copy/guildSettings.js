@@ -1,0 +1,1 @@
+function showNext(e){""!=$(e).val()&&($(e).show(),$(e).parent().next(".js-hide-empty").show())}$(".js-show-next").change(function(){showNext(this)}).change(),$(".js-show-next").keyup(function(){showNext(this)}),$("[name=show_message]").change(function(){this.checked?$("#message").show():$("#message").hide()}).change();

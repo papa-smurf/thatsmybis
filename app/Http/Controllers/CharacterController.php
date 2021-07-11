@@ -71,7 +71,7 @@ class CharacterController extends Controller
             },
             'allCharacters' => function ($query) {
                 // Use comparison that takes accents into account... as so many WoW characters have accented names.
-                return $query->whereRaw('LOWER(characters.name) COLLATE utf8mb4_bin = (?)', strtolower(request()->input('name')));
+                return $query->whereRaw('LOWER(characters.name) = BINARY(?)', strtolower(request()->input('name')));
             },
             'raidGroups',
         ]);
@@ -451,7 +451,7 @@ class CharacterController extends Controller
                 return $query->where('members.id', request()->input('member_id'));
             },
             'allCharacters' => function ($query) {
-                return $query->whereRaw('LOWER(characters.name) COLLATE utf8mb4_bin = (?)', strtolower(request()->input('name')))
+                return $query->whereRaw('LOWER(characters.name) = BINARY(?)', strtolower(request()->input('name')))
                     ->orWhere('id', request()->input('id'));
             },
             'raidGroups',

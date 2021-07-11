@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
 
         $specs = ['holy', 'frost', 'prot', 'arcane', 'resto', 'daggers', 'sword', 'enhancement'];
         $races = ['orc', 'tauren', 'undead', 'troll'];
+		$classes = ['druid', 'hunter', 'mage', 'paladin', 'priest', 'rogue', 'shaman', 'warlock'];
 
         for ($i = 0; $i < 5; $i++) {
             DB::table('users')->insert([

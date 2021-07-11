@@ -25,8 +25,26 @@
             <form id="editForm" class="form-horizontal" role="form" method="POST" action="{{ route('guild.submitSettings', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
                 {{ csrf_field() }}
 
+				<div class="row">
+                    <div class="col-12 pt-2 mt-3 mb-2">
+                        <h2 class="font-weight-medium">
+                            <span class="fab fa-fw fa-python text-muted"></span>
+                            Actions
+                        </h2>
+                    </div>
+                </div>
+
                 <div class="row">
-                    <div class="col-12 pt-2 pb-0 mb-3 bg-light rounded">
+                    <div class="col-12 pt-2 pb-1 mb-3 bg-light rounded">
+                        <div class="mb-0">
+							<a href="{{ route('commands.recalculateOrderModifiers') }}">Recalculate order modifiers</a>
+                        </div>
+                    </div>
+                </div>
+
+                {{--
+				<div class="row">
+					<div class="col-12 pt-2 pb-0 mb-3 bg-light rounded">
                         <!-- Expansion -->
                         <div class="row">
                             <div class="col-md-8 col-12">
@@ -194,6 +212,7 @@
                         </div>
                     </div>
                 </div>
+				--}}
 
                 <div class="row">
                     <div class="col-12 pt-2 mt-3 mb-2">
