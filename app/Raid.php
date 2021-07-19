@@ -37,7 +37,6 @@ class Raid extends Model
         'cancelled_at',
         'public_note',
         'officer_note',
-        'logs',
     ];
 
     /**
