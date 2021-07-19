@@ -379,7 +379,7 @@ class CharacterController extends Controller
 
         $editOfficerNotePermission = false;
         if ($currentMember->hasPermission('edit.officer-notes')) {
-            $showOfficerNotePermission = true;
+            $editOfficerNotePermission = true;
         }
 
         return view('character.show', [
@@ -438,6 +438,18 @@ class CharacterController extends Controller
         ]);
     }
 
+	public function updatePersonalOrderModifier($characterId)
+    {
+        $character = Character::findOrFail($characterId);
+        $character->personal_order_modifier = request()->input('personal_order_modifier');
+        $character->save();
+
+        $cacheKey = 'character:' . $characterId . ':guild:' . $character->guild->id . ':attendance:' . $character->guild->is_attendance_hidden;
+        Cache::forget($cacheKey);
+
+        return redirect()->back();
+    }
+	
     /**
      * Update a character
      * @return

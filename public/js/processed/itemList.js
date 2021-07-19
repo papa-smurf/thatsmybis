@@ -194,7 +194,7 @@ function getCharacterList(data, type, itemId) {
                 <a href="/${ guild.id }/${ guild.slug }/c/${ character.id }/${ character.slug }"
                     title="${ character.raid_group_name ? character.raid_group_name + ' -' : '' } ${ character.level ? character.level : '' } ${ character.race ? character.race : '' } ${ character.spec ? character.spec : '' } ${ character.class ? character.class : '' } ${ character.raid_count ? `(${ character.raid_count } raid${ character.raid_count > 1 ? 's' : '' } attended)` : `` } ${ character.username ? '(' + character.username + ')' : '' }"
                     class="tag text-muted d-inline">
-                    <span class="">${ type !== 'received' && character.pivot.order ? (character.pivot.order - character.order_modifier).toFixed(1) : '' }</span>
+                    <span class="">${ type !== 'received' && character.pivot.order ? (character.pivot.order - character.attendance_order_modifier - (character.personal_order_modifier * -1)).toFixed(1) : '' }</span>
                     <span class="small font-weight-bold">${ character.pivot.is_offspec ? 'OS' : '' }</span>
                     <span class="role-circle" style="background-color:${ getColorFromDec(character.raid_group_color) }"></span>
                     <span class="text-${ character.class ? character.class.toLowerCase() : '' }-important">${ character.name }</span>

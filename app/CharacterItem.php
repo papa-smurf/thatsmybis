@@ -2,17 +2,24 @@
 
 namespace App;
 
-use App\Character;
-use App\Item;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CharacterItem extends Model
 {
-	public function character() {
+    /**
+     * @return BelongsTo
+     */
+    public function character(): BelongsTo
+    {
         return $this->belongsTo(Character::class);
     }
 
-	public function item() {
+    /**
+     * @return BelongsTo
+     */
+    public function item(): BelongsTo
+    {
         return $this->belongsTo(Item::class, 'item_id');
     }
 }

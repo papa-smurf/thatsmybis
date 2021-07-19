@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Console\Commands;
-
+use DB;
 use App\Character;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
@@ -39,6 +39,8 @@ class CharacterRecalculateDKP extends Command
 		$Detail = $DOM->getElementsByTagName('td');
 		$ScriptTags = $DOM->getElementsByTagName('script');
 
+		DB::table('characters')->update(['attendance_order_modifier' => 0]);
+		
 		//#Get header name of the table
 		$i = 0;
 		foreach($Header as $NodeHeader)
@@ -122,7 +124,7 @@ class CharacterRecalculateDKP extends Command
 
 				// TEMPORARY!!!!
 				// if ($i > 11) {
-				if ($i >= 5) {
+				if ($i >= 4) {
 					break;
 				}
 
@@ -150,7 +152,7 @@ class CharacterRecalculateDKP extends Command
 				continue;
 			}
 
-			$character->order_modifier = $characterAttendance['modifier'];
+			$character->attendance_order_modifier = $characterAttendance['modifier'];
 			$character->save();
 		}
     }

@@ -2,17 +2,24 @@
 
 namespace App;
 
-use App\Item;
-use App\Guild;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GuildItem extends Model
 {
-    public function item () {
-		return $this->belongsTo(Item::class, 'item_id', 'item_id');
-	}
+    /**
+     * @return BelongsTo
+     */
+    public function item (): BelongsTo
+    {
+        return $this->belongsTo(Item::class, 'item_id', 'item_id');
+    }
 
-	public function guild () {
-		return $this->belongsTo(Guild::class);
-	}
+    /**
+     * @return BelongsTo
+     */
+    public function guild (): BelongsTo
+    {
+        return $this->belongsTo(Guild::class);
+    }
 }

@@ -67,6 +67,8 @@ Route::group([
     Route::get( '/guilds', 'AdminController@showGuilds')->name('admin.guilds');
 });
 
+Route::post('/updatePersonalOrderModifier/{id}', 'CharacterController@updatePersonalOrderModifier')->name('character.updatePersonalOrderModifier');
+
 Route::group([
         'middleware' => ['seeUser', 'checkGuildPermissions'],
         'prefix'     => '{guildId}/{guildSlug}',
@@ -182,11 +184,10 @@ Route::group([
     Route::group(['prefix' => 'export'], function () {
         Route::get('/',                                      'GuildController@showExports')               ->name('guild.exports');
         Route::get('/characters-with-items/{fileType}',      'ExportController@exportCharactersWithItems')->name('guild.export.charactersWithItems')->where(['fileType' => '(html|json)']);
-		Route::get('/gargul/wishlist',                                'ExportController@gargulWishlistJson')->name('guild.export.gargul.wishlist');
-		Route::get('/gargul/priority',                                'ExportController@gargulLootPriorityCSV')->name('guild.export.gargul.priority');
+		Route::get('/gargul',                                'ExportController@gargulWishlistJson')       ->name('guild.export.gargul');
         Route::get('/item-notes/{fileType}',                 'ExportController@exportItemNotes')          ->name('guild.export.itemNotes')          ->where(['fileType' => '(csv|html)']);
         Route::get('/loot/{fileType}/{lootType}',            'ExportController@exportGuildLoot')          ->name('guild.export.loot')               ->where(['fileType' => '(csv|html)', 'lootType' => '(all|prio|received|wishlist)']);
-        Route::get('/raid-groups/{fileType}/{raidGroupId?}', 'ExportController@exportRaidGroups')        ->name('guild.export.raidGroups')         ->where(['fileType' => '(csv|html)']);
+        Route::get('/raid-groups/{fileType}/{raidGroupId?}', 'ExportController@exportRaidGroups')         ->name('guild.export.raidGroups')         ->where(['fileType' => '(csv|html)']);
     });
 
 	Route::get( '/commands/recalculate-order-modifiers',  'CommandsController@recalculateOrderModifiers')->name('commands.recalculateOrderModifiers');
