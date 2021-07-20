@@ -68,7 +68,7 @@ class CharacterController extends Controller
             },
             'allCharacters' => function ($query) {
                 // Use comparison that takes accents into account... as so many WoW characters have accented names.
-                return $query->whereRaw('LOWER(characters.name) COLLATE utf8mb4_bin = (?)', strtolower(request()->input('name')));
+                return $query->whereRaw('LOWER(characters.name) = BINARY(?)', strtolower(request()->input('name')));
             },
             'raidGroups',
         ]);
@@ -298,7 +298,7 @@ class CharacterController extends Controller
 
         $editOfficerNotePermission = false;
         if ($currentMember->hasPermission('edit.officer-notes')) {
-            $showOfficerNotePermission = true;
+            $editOfficerNotePermission = true;
         }
 
         return view('character.show', [
@@ -370,7 +370,7 @@ class CharacterController extends Controller
                 return $query->where('members.id', request()->input('member_id'));
             },
             'allCharacters' => function ($query) {
-                return $query->whereRaw('LOWER(characters.name) COLLATE utf8mb4_bin = (?)', strtolower(request()->input('name')))
+                return $query->whereRaw('LOWER(characters.name) = BINARY(?)', strtolower(request()->input('name')))
                     ->orWhere('id', request()->input('id'));
             },
             'raidGroups',
@@ -596,5 +596,21 @@ class CharacterController extends Controller
         request()->session()->flash('status', "Successfully updated " . $character->name ."'s note.");
 
         return redirect()->route('character.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'characterId' => $character->id, 'nameSlug' => $character->slug, 'b' => 1]);
+    }
+
+    /**
+     * @param $characterId
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function updatePersonalOrderModifier($characterId)
+    {
+        $character = Character::findOrFail($characterId);
+        $character->personal_order_modifier = request()->input('personal_order_modifier');
+        $character->save();
+
+        $cacheKey = 'character:' . $characterId . ':guild:' . $character->guild->id . ':attendance:' . $character->guild->is_attendance_hidden;
+        Cache::forget($cacheKey);
+
+        return redirect()->back();
     }
 }

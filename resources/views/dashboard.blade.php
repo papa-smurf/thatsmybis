@@ -170,16 +170,6 @@
             </div>
         @endif
 
-        <div class="col-12 text-center mb-5">
-            <div class="mb-5">
-                <p class="font-weight-normal pt-3 text-4">
-                    {{ __("Are you a Guild Master?") }}
-                </p>
-                <a class="btn btn-light" href="{{ route('guild.showRegister') }}" title="Register a Guild" rel="nofollow">
-                    <img class="discord-link" src="{{ asset('images/discord-logo.svg') }}" alt="" /> {{ __("Register a Guild") }}
-                </a>
-            </div>
-        </div>
     </div>
 </div>
 @endsection

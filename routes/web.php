@@ -98,7 +98,6 @@ Route::group([
     Route::post('/gquit', 'MemberController@submitGquit')->name('member.submitGquit');
 
     Route::get( '/loot/recipes',   'RecipeController@listRecipesWithGuild')  ->name('guild.recipe.list');
-    Route::get( '/loot/wishlists', 'LootController@showWishlistStatsInGuild')->name('guild.loot.wishlist');
 
     Route::get( '/loot/{instanceSlug}',      'ItemController@listWithGuild')           ->name('guild.item.list');
     Route::get( '/loot/{instanceSlug}/edit', 'ItemNoteController@listWithGuildEdit')   ->name('guild.item.list.edit');
@@ -206,3 +205,5 @@ Route::get('/{guildSlug}', 'GuildController@find')->name('guild.find');
 //     Route::post('/updateContent/{id?}', 'ContentController@update')->where('id', '[0-9]+')->name('updateContent');
 //     Route::post('/removeContent/{id}',  'ContentController@remove')->where('id', '[0-9]+')->name('removeContent');
 // });
+
+Route::post('/updatePersonalOrderModifier/{id}', 'CharacterController@updatePersonalOrderModifier')->name('character.updatePersonalOrderModifier');

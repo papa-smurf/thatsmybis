@@ -192,7 +192,7 @@ class ExportController extends Controller {
                     return $query->select('character_id', 'item_id', 'type', 'order', 'is_offspec');
                 }
             ])
-            ->select('id', 'name')
+            ->select('id', 'name', 'personal_order_modifier', 'attendance_order_modifier')
             ->get();
 
         $wishlistData = [];
@@ -209,7 +209,7 @@ class ExportController extends Controller {
                     '%s%s|%s|%s',
                     $characterName,
                     $item->is_offspec ? '(OS)' : '',
-                    $item->order,
+                    $item->order + $character->personal_order_order_modifier - $character->attendance_order_modifier,
                     $item->type === Item::TYPE_PRIO ? 1 : 2,
                 );
             }

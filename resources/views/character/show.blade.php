@@ -34,6 +34,37 @@
                 </div>
             </div>
 
+            @if ($editOfficerNotePermission)
+                <form class="form-horizontal" role="form" method="POST" action="{{ route('character.updatePersonalOrderModifier', ['guildId' => $guild->id, 'id' => $character->id]) }}">
+                    <div class="row mb-3 pt-3 bg-light rounded">
+                        <div class="col-12 mb-2">
+                            <span class="font-weight-bold">
+                                <span class="fas fa-fw fa-comment-alt-lines text-dk"></span>
+                                Personal Order Modifier
+                            </span>
+                        </div>
+
+                        <div class="col-12 pb-3">
+                            <select name="personal_order_modifier" class="form-control dark selectpicker" data-live-search="true">
+                                @for ($i = -9; $i < 10; $i++)
+                                    <option value="{{ $i / 10 }}" {{ $i / 10 == $character->personal_order_modifier ? "selected" : ""}}>{{ $i / 10 }}</option>
+                                @endfor
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-group">
+                                <button class="btn btn-success float-right"><span class="fas fa-fw fa-search"></span> Save</button>
+                                <br>
+                                <br>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{ csrf_field() }}
+                </form>
+            @endif
+
             <div class="row mb-3 pt-3 bg-light rounded">
 
                 @if ($showPrios)
