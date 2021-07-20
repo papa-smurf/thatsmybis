@@ -386,6 +386,10 @@
                         {{ __("Guild") }}
                     </a>
                     <div class="dropdown-menu" aria-labelledby="adminNavDropdown">
+                        <a class="dropdown-item" href="{{ url('http://giveitalick.insovietrussia.nl/utilities/bank') }}" target="_blank">
+                            Bank
+                        </a>
+                        
                         @if ($editGuild)
                             <a class="dropdown-item" href="{{ route('guild.settings', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
                                 {{ __("Settings") }}
