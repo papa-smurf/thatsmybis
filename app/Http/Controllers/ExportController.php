@@ -209,7 +209,7 @@ class ExportController extends Controller {
                     '%s%s|%s|%s',
                     $characterName,
                     $item->is_offspec ? '(OS)' : '',
-                    $item->order + $character->personal_order_order_modifier - $character->attendance_order_modifier,
+                    $item->order + $character->personal_order_modifier - $character->attendance_order_modifier,
                     $item->type === Item::TYPE_PRIO ? 1 : 2,
                 );
             }
