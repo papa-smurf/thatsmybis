@@ -389,7 +389,7 @@
                         <a class="dropdown-item" href="{{ url('http://giveitalick.insovietrussia.nl/utilities/bank') }}" target="_blank">
                             Bank
                         </a>
-                        
+
                         @if ($editGuild)
                             <a class="dropdown-item" href="{{ route('guild.settings', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
                                 {{ __("Settings") }}
@@ -406,9 +406,6 @@
                             </a>
                         @endif
 
-                        <a class="dropdown-item" target="_blank" href="{{ route('guild.export.addonItems', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'fileType' => 'html']) }}">
-                            {{ __("Export for TMB Tooltips") }}
-                        </a>
                         <a class="dropdown-item" href="{{ route('guild.exports', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
                             {{ __("Exports") }}
                         </a>
