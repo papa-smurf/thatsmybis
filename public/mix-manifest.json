@@ -1,13 +1,13 @@
 {
-    "/js/processed/autocomplete.js": "/js/processed/autocomplete.js",
-    "/js/processed/guildSettings.js": "/js/processed/guildSettings.js",
-    "/js/processed/helpers.js": "/js/processed/helpers.js",
-    "/js/processed/itemList.js": "/js/processed/itemList.js",
-    "/js/processed/assignLoot.js": "/js/processed/assignLoot.js",
-    "/js/processed/prio.js": "/js/processed/prio.js",
-    "/js/processed/roster.js": "/js/processed/roster.js",
-    "/js/processed/raidEdit.js": "/js/processed/raidEdit.js",
-    "/js/processed/raidGroupAttendance.js": "/js/processed/raidGroupAttendance.js",
-    "/js/processed/raidGroupCharacters.js": "/js/processed/raidGroupCharacters.js",
-    "/css/processed/main.css": "/css/processed/main.css"
+    "/js/processed/autocomplete.js": "/js/processed/autocomplete.js?id=9ab640da5e30fb89b332",
+    "/js/processed/guildSettings.js": "/js/processed/guildSettings.js?id=48d7cbb15911544c46af",
+    "/js/processed/helpers.js": "/js/processed/helpers.js?id=25165f35b425ea29fb56",
+    "/js/processed/itemList.js": "/js/processed/itemList.js?id=b0f11bc84b4a40a2004f",
+    "/js/processed/assignLoot.js": "/js/processed/assignLoot.js?id=2db6bfca46427b7e0119",
+    "/js/processed/prio.js": "/js/processed/prio.js?id=781327ecc1b782c857e8",
+    "/js/processed/roster.js": "/js/processed/roster.js?id=e8e34565d412670ece8b",
+    "/js/processed/raidEdit.js": "/js/processed/raidEdit.js?id=44ea5cda68c30ac7fbc8",
+    "/js/processed/raidGroupAttendance.js": "/js/processed/raidGroupAttendance.js?id=5291d193341948403b6d",
+    "/js/processed/raidGroupCharacters.js": "/js/processed/raidGroupCharacters.js?id=d8c571342738c8850a38",
+    "/css/processed/main.css": "/css/processed/main.css?id=e9294b712503ca8186b9"
 }
