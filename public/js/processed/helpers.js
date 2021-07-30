@@ -1,1 +1,531 @@
-var TIER_MODE_NUM="num",TIER_MODE_S="s",TIERS={1:"S",2:"A",3:"B",4:"C",5:"D",6:"F"},timestampUpdateInterval=null;function addDateInputHandlers(){$(".js-date-input").change(function(){var t=$(this).prev(".js-date");$(this).val()?t.val(moment($(this).val()).utc().format("YYYY-MM-DD HH:mm:ss")):(t.val(date),$(this).val(moment.utc(date).local().format("YYYY-MM-DD HH:mm:ss")))})}function addInputAntiSubmitHandler(){var t=arguments.length>0&&void 0!==arguments[0]?arguments[0]:":text";$(t).on("keypress keyup",function(t){if(13==t.which)return!1})}function addNestedDropdownSupport(){var t;$.fn.dropdown=(t=$.fn.dropdown,function(e){"string"==typeof e&&"toggle"===e&&($(".has-child-dropdown-show").removeClass("has-child-dropdown-show"),$(this).closest(".dropdown").parents(".dropdown").addClass("has-child-dropdown-show"));var a=t.call($(this),e);return $(this).off("click.bs.dropdown"),a}),$(function(){$('.dropdown [data-toggle="dropdown"]').on("click",function(t){$(this).dropdown("toggle"),t.stopPropagation()}),$(".dropdown").on("hide.bs.dropdown",function(t){$(this).is(".has-child-dropdown-show")&&($(this).removeClass("has-child-dropdown-show"),t.preventDefault()),t.stopPropagation()})})}function addNoteHandlers(){$(".js-show-note-edit").click(function(){$(".js-note-input").toggle()})}function addSortHandlers(){$(".js-sortable").sortable({handle:".js-sort-handle"}),$(".js-sortable-lazy").one("mouseenter",function(){$(this).sortable({handle:".js-sort-handle"})})}function addWishlistSortHandlers(){$(".js-sort-wishlists").click(function(){$(".js-wishlist-unsorted").toggle(),$(".js-wishlist-sorted").toggle()})}function cleanUrl(t,e,a){if(t){try{var n=decodeURIComponent(unescape(a)).replace(/[^\w:]/g,"").toLowerCase()}catch(t){return null}if(0===n.indexOf("javascript:")||0===n.indexOf("vbscript:")||0===n.indexOf("data:"))return null}e&&!originIndependentUrl.test(a)&&(a=resolveUrl(e,a));try{a=encodeURI(a).replace(/%25/g,"%")}catch(t){return null}return a}function decToHex(t){return parseInt(t).toString(16)}function getAttendanceColor(){var t=arguments.length>0&&void 0!==arguments[0]?arguments[0]:0,e="";return e=t>=.95?"text-tier-1":t>=.9?"text-tier-2":t>=.8?"text-tier-3":t>=.7?"text-tier-4":"text-tier-5"}function getColorFromDec(t){if(t=parseInt(t))for(t=decToHex(t);t.length<6;)t="0"+t;else t="FFF";return"#"+t}function getItemTierLabel(t,e){return t.guild_tier?e==TIER_MODE_S?TIERS[t.guild_tier]:t.guild_tier:""}function makeWowheadLinks(){try{$WowheadPower.refreshLinks()}catch(t){console.log("Failed to refresh wowhead links.")}}function nl2br(t){return t?t.replace(/\n/g,"<br>"):""}function parseMarkdown(){var t=arguments.length>0&&void 0!==arguments[0]?arguments[0]:null,e=new marked.Renderer;e.link=function(t,e,a){var n="";return null===(t=cleanUrl(this.options.sanitize,this.options.baseUrl,t))?a:(n+='<a target="_blank" href="'+t+'"',e&&(n+=' title="'+e+'"'),n+=">"+a+"</a>")},t&&!t.hasClass("js-markdown-parsed")?(t.html(marked(DOMPurify.sanitize(t.html()),{renderer:e})),t.addClass("js-markdown-parsed")):($(".js-markdown").each(function(){if(!$(this).hasClass("js-markdown-parsed")){var t=DOMPurify.sanitize($.trim($(this).text()));$(this).html(marked(t),{renderer:e}),$(this).addClass("js-markdown-parsed")}}),$(".js-markdown-inline").each(function(){if(!$(this).hasClass("js-markdown-parsed")){var t=DOMPurify.sanitize($.trim($(this).text()));$(this).html(marked.parseInline(t),{renderer:e}),$(this).addClass("js-markdown-parsed")}}))}function rgbToHex(t){for(var e=Number(t).toString(16);e.length<6;)e="0"+e;return e}function slug(t){var e="-",a="àáäâãåăæçèéëêǵḧìíïîḿńǹñòóöôœṕŕßśșțùúüûǘẃẍÿź·/_,:;",n="aaaaaaaaceeeeghiiiimnnnoooooprssstuuuuuwxyz------",r=new RegExp(a.split("").join("|"),"g"),o=t.toString().toLowerCase().replace(/\s+/g,"-").replace(r,function(t){return n.charAt(a.indexOf(t))}).replace(/&/g,"").replace(/[^\w\-]+/g,"").replace(/\-\-+/g,"-").replace(/^-+/,"").replace(/-+$/,"").replace(/-+/g,"-").substr(0,50);return o||"-"}function trackTimestamps(){var t=arguments.length>0&&void 0!==arguments[0]?arguments[0]:15e3;$(".js-watchable-timestamp").each(function(){var t;$(this).data("isShort")&&moment.locale("en",{relativeTime:{past:"%s ago",s:"just now",ss:"%ss",m:"%dm",mm:"%dm",h:"%dh",hh:"%dh",d:"%dd",dd:"%dd",M:"%dmo",MM:"%dmo",y:"%dy",yy:"%dy"}});var e=$(this).data("timestamp");e<1e12&&(e*=1e3);var a=!1;e>Date.now()&&(a=!0);var n=null,r=$(this).data("maxDays");n=r&&e<moment().valueOf()-864e5*r?"over 2 weeks":moment.utc(e).fromNow(!0),$(this).is("abbr")?$(this).prop("title",(a?"in ":"")+n+(a?"":" ago")):$(this).html(n)}),$(".js-timestamp").each(function(){var t=$(this).data("timestamp");t<1e12&&(t*=1e3);var e=$(this).data("format")?$(this).data("format"):"dddd, MMMM Do YYYY, h:mm a",a=moment.utc(t).local().format(e);$(this).is("abbr")?$(this).prop("title",a):$(this).html(a)}),$(".js-timestamp-title").each(function(){var t=$(this).data("title"),e=$(this).data("timestamp");e<1e12&&(e*=1e3);var a=moment.utc(e).local().format("dddd, MMMM Do YYYY, h:mm a");t?$(this).prop("title",t+" "+a):$(this).prop("title",a)}),timestampUpdateInterval&&clearInterval(timestampUpdateInterval),timestampUpdateInterval=setInterval(function(){$(".js-watchable-timestamp").each(function(){var t=$(this).data("timestamp");t<1e12&&(t*=1e3);var e=!1;t>Date.now()&&(e=!0);var a=null,n=$(this).data("maxDays");a=n&&t<moment().valueOf()-864e5*n?"over 2 weeks":moment.utc(t).fromNow(!0),$(this).is("abbr")?$(this).prop("title",(e?"in ":"")+a+(e?"":" ago")):$(this).html(a)})},t)}function warnBeforeLeaving(t){$(t).one("change",function(){window.onbeforeunload=function(){return!0}}),$(t).one("submit",function(){window.onbeforeunload=function(){}})}$.ajaxSetup({headers:{"X-CSRF-TOKEN":$('meta[name="csrf-token"]').attr("content")}}),marked.setOptions({gfm:!0,breaks:!0}),$(document).ready(function(){addNestedDropdownSupport(),parseMarkdown(),makeWowheadLinks(),trackTimestamps(),addDateInputHandlers(),addInputAntiSubmitHandler(),addNoteHandlers(),addWishlistSortHandlers(),$(".js-edit-content").click(function(t){t.preventDefault();var e=$(this).data("id");$(".js-content[data-id="+e+"]").toggle()})});
+// For knowing what kind of tier style to display
+var TIER_MODE_NUM = 'num';
+var TIER_MODE_S = 's';
+var TIERS = {
+  1: 'S',
+  2: 'A',
+  3: 'B',
+  4: 'C',
+  5: 'D',
+  6: 'F'
+}; // For keeping track of the intervals updating times
+
+var timestampUpdateInterval = null; // Add CSRF token to all request headers
+
+$.ajaxSetup({
+  headers: {
+    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+  }
+}); // For config options: https://marked.js.org/#/USING_ADVANCED.md#options
+
+marked.setOptions({
+  gfm: true,
+  breaks: true
+});
+$(document).ready(function () {
+  // Add support for better nav dropdowns
+  addNestedDropdownSupport(); // Format any markdown fields
+
+  parseMarkdown(); // Fix wowhead links that were generated by markdown
+
+  makeWowheadLinks(); // Watch any watchable times on the page
+
+  trackTimestamps(); // For local to UTC time conversions before the date is sent to the server
+
+  addDateInputHandlers(); // Don't submit forms when the user presses enter in a textbox
+
+  addInputAntiSubmitHandler(); // For toggling hidden note inputs
+
+  addNoteHandlers(); // For enabling wishlist sorting
+
+  addWishlistSortHandlers();
+  $(".js-edit-content").click(function (e) {
+    e.preventDefault();
+    var id = $(this).data("id");
+    $(".js-content[data-id=" + id + "]").toggle();
+  });
+}); // Take the visible date input, and convert its time to UTC, update the hidden date input.
+
+function addDateInputHandlers() {
+  $(".js-date-input").change(function () {
+    var actualInput = $(this).prev(".js-date");
+
+    if ($(this).val()) {
+      actualInput.val(moment($(this).val()).utc().format("YYYY-MM-DD HH:mm:ss"));
+    } else {
+      actualInput.val(date);
+      $(this).val(moment.utc(date).local().format("YYYY-MM-DD HH:mm:ss"));
+    }
+  });
+}
+/**
+ * Prevents inputs from submitting their form when enter is pressed.
+ */
+
+
+function addInputAntiSubmitHandler() {
+  var selector = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : ":text";
+  $(selector).on("keypress keyup", function (e) {
+    if (e.which == 13) {
+      return false;
+    }
+  });
+} // Copied from https://stackoverflow.com/a/61222302/1196517
+
+
+function addNestedDropdownSupport() {
+  $.fn.dropdown = function () {
+    var $bsDropdown = $.fn.dropdown;
+    return function (config) {
+      if (typeof config === 'string' && config === 'toggle') {
+        // dropdown toggle trigged
+        $('.has-child-dropdown-show').removeClass('has-child-dropdown-show');
+        $(this).closest('.dropdown').parents('.dropdown').addClass('has-child-dropdown-show');
+      }
+
+      var ret = $bsDropdown.call($(this), config);
+      $(this).off('click.bs.dropdown'); // Turn off dropdown.js click event, it will call 'this.toggle()' internal
+
+      return ret;
+    };
+  }();
+
+  $(function () {
+    $('.dropdown [data-toggle="dropdown"]').on('click', function (e) {
+      $(this).dropdown('toggle');
+      e.stopPropagation();
+    });
+    $('.dropdown').on('hide.bs.dropdown', function (e) {
+      if ($(this).is('.has-child-dropdown-show')) {
+        $(this).removeClass('has-child-dropdown-show');
+        e.preventDefault();
+      }
+
+      e.stopPropagation();
+    });
+  });
+} // Add basic handlers to show edit forms for notes
+
+
+function addNoteHandlers() {
+  $(".js-show-note-edit").click(function () {
+    $(".js-note-input").toggle();
+  });
+} // For enabling sortable elements
+
+
+function addSortHandlers() {
+  $(".js-sortable").sortable({
+    handle: ".js-sort-handle"
+  }); // sortable() is slow to initialize when applied to hundreds of elements, so this solves for that scenario
+
+  $(".js-sortable-lazy").one("mouseenter", function () {
+    $(this).sortable({
+      handle: ".js-sort-handle"
+    });
+  });
+} // Add basic handlers to change the sorting of wishlists
+
+
+function addWishlistSortHandlers() {
+  $(".js-sort-wishlists").click(function () {
+    $(".js-wishlist-unsorted").toggle();
+    $(".js-wishlist-sorted").toggle();
+  });
+}
+
+function cleanUrl(sanitize, base, href) {
+  if (sanitize) {
+    try {
+      var prot = decodeURIComponent(unescape(href)).replace(/[^\w:]/g, '').toLowerCase();
+    } catch (e) {
+      return null;
+    }
+
+    if (prot.indexOf('javascript:') === 0 || prot.indexOf('vbscript:') === 0 || prot.indexOf('data:') === 0) {
+      return null;
+    }
+  }
+
+  if (base && !originIndependentUrl.test(href)) {
+    href = resolveUrl(base, href);
+  }
+
+  try {
+    href = encodeURI(href).replace(/%25/g, '%');
+  } catch (e) {
+    return null;
+  }
+
+  return href;
+}
+
+function decToHex(number) {
+  return parseInt(number).toString(16);
+} // Based on attendance percentage, return a CSS color class
+
+
+function getAttendanceColor() {
+  var percentage = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+  var color = '';
+
+  if (percentage >= 0.95) {
+    color = 'text-tier-1';
+  } else if (percentage >= 0.9) {
+    color = 'text-tier-2';
+  } else if (percentage >= 0.8) {
+    color = 'text-tier-3';
+  } else if (percentage >= 0.7) {
+    color = 'text-tier-4';
+  } else {
+    color = 'text-tier-5';
+  }
+
+  return color;
+}
+/**
+ * Pass a number, get back a hex color complete with leading hash to make it HTML friendly
+ */
+
+
+function getColorFromDec(color) {
+  color = parseInt(color);
+
+  if (color) {
+    color = decToHex(color); // If it's too short, keep adding prefixed zero's until it's long enough
+
+    while (color.length < 6) {
+      color = '0' + color;
+    }
+  } else {
+    color = 'FFF';
+  }
+
+  return '#' + color;
+} // Based on the guild's tier mode setting, return a tier label
+
+
+function getItemTierLabel(item, tierMode) {
+  if (item.guild_tier) {
+    if (tierMode == TIER_MODE_S) {
+      return TIERS[item.guild_tier];
+    } else {
+      return item.guild_tier;
+    }
+  } else {
+    return '';
+  }
+} // Updates any wowhead links to have a tooltip, plus other modifications.
+// The configuration for this is defined in the HTML header (app.blade.php)
+
+
+function makeWowheadLinks() {
+  // Sometimes the error "WH.getDataEnv is not a function" appears
+  // This *seems* to be due to trying to refresh the links before they've finished their inital
+  // setup, but I'm not sure.
+  // If the error goes through (and I don't see anything we can do to fix/handle it), it breaks the
+  // javascript on the rest of our page. try/catch is a cheap fix.
+  try {
+    $WowheadPower.refreshLinks();
+  } catch (error) {
+    console.log("Failed to refresh wowhead links.");
+  }
+}
+/**
+ * Convert newlines to <br> tags. Given the odd name because that's the name PHP uses.
+ *
+ * @param string string The string to convert.
+ *
+ * @return string
+ */
+
+
+function nl2br(string) {
+  return string ? string.replace(/\n/g, "<br>") : '';
+}
+/**
+ * Parse markdown in the given element from markdown into HTML.
+ * If no element is provided, do it for all markdown elements.
+ */
+
+
+function parseMarkdown() {
+  var element = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+  var render = new marked.Renderer(); // Disable pretty links so that users always know what link they're clicking on.
+  // This is to prevent abuse.
+  // Autolinks still work: 'https://nubbl.com' -> 'https://nubbl.com'
+  // Pretty links format like so: '[title1](https://www.example.com)' -> 'title1 (https://www.example.com)'
+
+  /*
+      render.link = function(href, title, text) {
+          var textIsDifferent = text ? ((text == href) ? false : true) : false;
+          var out = '';
+            if (textIsDifferent) {
+              out = text + ' (';
+          }
+            href = cleanUrl(this.options.sanitize, this.options.baseUrl, href);
+            if (href === null) {
+              return text;
+          }
+            out += '<a target="_blank" href="' + href + '"';
+          if (title) {
+              out += ' title="' + title + '"';
+          }
+          out += '>' + href + '</a>';
+            if (textIsDifferent) {
+              out += ')';
+          }
+          return out;
+      };
+  */
+  // Add target=_blank to links
+
+  render.link = function (href, title, text) {
+    var out = '';
+    href = cleanUrl(this.options.sanitize, this.options.baseUrl, href);
+
+    if (href === null) {
+      return text;
+    }
+
+    out += '<a target="_blank" href="' + href + '"';
+
+    if (title) {
+      out += ' title="' + title + '"';
+    }
+
+    out += '>' + text + '</a>';
+    return out;
+  }; // Disable embedded images. Instead, display as a link.
+  // '![alt text](https://example.com/image.jpg)' -> 'alt text (https://example.com/image.jpg)'
+  // '![](https://example.com/image.jpg)' -> 'https://example.com/image.jpg'
+  // render.image = function(href, title, text) {
+  //     var textIsDifferent = text ? ((text == href) ? false : true) : false;
+  //     var out = '';
+  //     if (textIsDifferent) {
+  //         out = text + ' (';
+  //     }
+  //     href = cleanUrl(this.options.sanitize, this.options.baseUrl, href);
+  //     if (href === null) {
+  //         return text;
+  //     }
+  //     out += '<a target="_blank" href="' + href + '"';
+  //     if (title) {
+  //         out += ' title="' + title + '"';
+  //     }
+  //     out += '>' + href + '</a>';
+  //     if (textIsDifferent) {
+  //         out += ')';
+  //     }
+  //     return out;
+  // };
+
+
+  if (element && !element.hasClass("js-markdown-parsed")) {
+    element.html(marked(DOMPurify.sanitize(element.html()), {
+      renderer: render
+    }));
+    element.addClass("js-markdown-parsed"); // To avoid going over the same element twice
+  } else {
+    $(".js-markdown").each(function () {
+      if (!$(this).hasClass("js-markdown-parsed")) {
+        var text = DOMPurify.sanitize($.trim($(this).text()));
+        $(this).html(marked(text), {
+          renderer: render
+        });
+        $(this).addClass("js-markdown-parsed");
+      }
+    });
+    $(".js-markdown-inline").each(function () {
+      if (!$(this).hasClass("js-markdown-parsed")) {
+        var text = DOMPurify.sanitize($.trim($(this).text()));
+        $(this).html(marked.parseInline(text), {
+          renderer: render
+        });
+        $(this).addClass("js-markdown-parsed");
+      }
+    });
+  }
+} // Takes a numeric RGB value and turns it into a hex colour code
+
+
+function rgbToHex(rgb) {
+  var hex = Number(rgb).toString(16); // If it's too short, keep adding prefixed zero's till it's long enough
+
+  while (hex.length < 6) {
+    hex = "0" + hex;
+  }
+
+  return hex;
+}
+
+; // Turn a url into a slug url!
+
+function slug(string) {
+  var theChosenCharacter = "-"; // You are the Chosen One
+
+  var a = "àáäâãåăæçèéëêǵḧìíïîḿńǹñòóöôœṕŕßśșțùúüûǘẃẍÿź·/_,:;";
+  var b = "aaaaaaaaceeeeghiiiimnnnoooooprssstuuuuuwxyz------";
+  var p = new RegExp(a.split("").join("|"), "g");
+  var slug = string.toString().toLowerCase().replace(/\s+/g, "-") // Replace spaces with -
+  .replace(p, function (c) {
+    return b.charAt(a.indexOf(c));
+  }) // Replace special characters
+  .replace(/&/g, "") // Remove ampersands (can optionally change to replace with '-and-)
+  .replace(/[^\w\-]+/g, "") // Remove all non-word characters
+  .replace(/\-\-+/g, "-") // Replace multiple - with single -
+  .replace(/^-+/, "") // Trim - from start of text
+  .replace(/-+$/, "") // Trim - from end of text
+  .replace(/-+/g, theChosenCharacter) // Replace - with The Chosen Character
+  .substr(0, 50); // Limit length to 50 characters
+
+  if (slug) {
+    return slug;
+  } else {
+    return theChosenCharacter;
+  }
+}
+/**
+ * Tracks any timestamps on the page and prints how long since/until each timestamp's date.
+ *
+ * @param rate How frequently the timestamps should be updated.
+ */
+
+
+function trackTimestamps() {
+  var rate = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 15000;
+  $(".js-watchable-timestamp").each(function () {
+    var isShort = $(this).data("isShort");
+
+    if (isShort) {
+      moment.locale('en', {
+        relativeTime: {
+          past: '%s ago',
+          s: 'just now',
+          ss: '%ss',
+          m: '%dm',
+          mm: '%dm',
+          h: '%dh',
+          hh: '%dh',
+          d: '%dd',
+          dd: '%dd',
+          M: '%dmo',
+          MM: '%dmo',
+          y: '%dy',
+          yy: '%dy'
+        }
+      });
+    }
+
+    var timestamp = $(this).data("timestamp");
+
+    if (timestamp < 1000000000000) {
+      // <-- Potential y33.658k bug [that's a y2k joke]
+      timestamp = timestamp * 1000; // convert from seconds to milliseconds
+    }
+
+    var future = false;
+
+    if (timestamp > Date.now()) {
+      future = true;
+    }
+
+    var since = null;
+    var maxDays = $(this).data("maxDays");
+
+    if (maxDays && timestamp < moment().valueOf() - maxDays * 86400000) {
+      // > 2 weeks, change the message to that
+      since = "over 2 weeks";
+    } else {
+      // < 2 weeks
+      since = moment.utc(timestamp).fromNow(true);
+    }
+
+    if ($(this).is("abbr")) {
+      $(this).prop("title", (future ? "in " : "") + since + (!future ? " ago" : ""));
+    } else {
+      $(this).html(since);
+    }
+  });
+  $(".js-timestamp").each(function () {
+    var timestamp = $(this).data("timestamp");
+
+    if (timestamp < 1000000000000) {
+      timestamp = timestamp * 1000;
+    }
+
+    var format = $(this).data("format") ? $(this).data("format") : "dddd, MMMM Do YYYY, h:mm a";
+    var since = moment.utc(timestamp).local().format(format);
+
+    if ($(this).is("abbr")) {
+      $(this).prop("title", since);
+    } else {
+      $(this).html(since);
+    }
+  });
+  $(".js-timestamp-title").each(function () {
+    var title = $(this).data("title");
+    var timestamp = $(this).data("timestamp");
+
+    if (timestamp < 1000000000000) {
+      timestamp = timestamp * 1000;
+    }
+
+    var time = moment.utc(timestamp).local().format("dddd, MMMM Do YYYY, h:mm a");
+
+    if (title) {
+      $(this).prop("title", title + ' ' + time);
+    } else {
+      $(this).prop("title", time);
+    }
+  });
+  timestampUpdateInterval ? clearInterval(timestampUpdateInterval) : null;
+  timestampUpdateInterval = setInterval(function () {
+    $(".js-watchable-timestamp").each(function () {
+      var timestamp = $(this).data("timestamp");
+
+      if (timestamp < 1000000000000) {
+        timestamp = timestamp * 1000; // convert from seconds to milliseconds
+      }
+
+      var future = false;
+
+      if (timestamp > Date.now()) {
+        future = true;
+      }
+
+      var since = null;
+      var maxDays = $(this).data("maxDays");
+
+      if (maxDays && timestamp < moment().valueOf() - maxDays * 86400000) {
+        // > 2 weeks, change the message to that
+        since = "over 2 weeks";
+      } else {
+        // < 2 weeks
+        since = moment.utc(timestamp).fromNow(true);
+      }
+
+      if ($(this).is("abbr")) {
+        $(this).prop("title", (future ? "in " : "") + since + (!future ? " ago" : ""));
+      } else {
+        $(this).html(since);
+      }
+    });
+  }, rate);
+}
+/**
+ * Warn a user before leaving the page if the given element has changed.
+ */
+
+
+function warnBeforeLeaving(selector) {
+  $(selector).one("change", function () {
+    window.onbeforeunload = function () {
+      return true;
+    };
+  }); // Remove the warning if submitting
+
+  $(selector).one("submit", function () {
+    window.onbeforeunload = function () {};
+  });
+}

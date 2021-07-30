@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class CharacterController extends Controller
 {
-    const MAX_RAID_GROUPS = 30;
+    const MAX_RAID_GROUPS    = 30;
 
     /**
      * Create a new controller instance.
@@ -278,7 +278,7 @@ class CharacterController extends Controller
         $showWishlist = false;
         if (!$guild->is_wishlist_disabled && (!$guild->is_wishlist_private || $character->member_id == $currentMember->id || $currentMember->hasPermission('view.wishlists'))) {
             $showWishlist = true;
-            $character = $character->load(['wishlist']);
+            $character = $character->load(['allWishlists']);
         }
 
         $showEdit = false;

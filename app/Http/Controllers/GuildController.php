@@ -325,6 +325,7 @@ class GuildController extends Controller
             'is_prio_autopurged'        => 'nullable|boolean',
             'is_wishlist_autopurged'    => 'nullable|boolean',
             'max_wishlist_items'        => 'nullable|integer|min:1|max:' . CharacterLootController::MAX_WISHLIST_ITEMS,
+            'current_wishlist_number'   => 'nullable|integer|min:1|max:' . CharacterLootController::MAX_WISHLIST_LISTS,
             'prio_show_count'           => 'nullable|integer|min:1|max:' . PrioController::MAX_PRIOS,
             'do_sort_items_by_instance' => 'nullable|boolean',
             'is_raid_group_locked'      => 'nullable|boolean',
@@ -353,6 +354,7 @@ class GuildController extends Controller
         $updateValues['is_prio_autopurged']        = request()->input('is_prio_autopurged') == 1 ? 1 : 0;
         $updateValues['is_wishlist_autopurged']    = request()->input('is_wishlist_autopurged') == 1 ? 1 : 0;
         $updateValues['max_wishlist_items']        = request()->input('max_wishlist_items');
+        $updateValues['current_wishlist_number']   = request()->input('current_wishlist_number');
         $updateValues['prio_show_count']           = request()->input('prio_show_count');
         $updateValues['do_sort_items_by_instance'] = request()->input('do_sort_items_by_instance') == 1 ? 1 : 0;
         $updateValues['is_raid_group_locked']      = request()->input('is_raid_group_locked') == 1 ? 1 : 0;

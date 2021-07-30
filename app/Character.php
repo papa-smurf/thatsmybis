@@ -221,28 +221,32 @@ class Character extends Model
         return ($query);
     }
 
-    public function wishlist() {
+    public function allWishlists() {
         $query = $this
             ->belongsToMany(Item::class, 'character_items', 'character_id', 'item_id')
             ->select([
                 'items.*',
-                'item_sources.id           AS item_source_id',
-                'item_sources.instance_id  AS instance_id',
-                'instances.name            AS instance_name',
-                'instances.order           AS instance_order',
-                'added_by_members.username AS added_by_username',
-                'guild_items.tier          AS guild_tier',
+                'item_sources.id             AS item_source_id',
+                'item_sources.instance_id    AS instance_id',
+                'instances.name              AS instance_name',
+                'instances.order             AS instance_order',
+                'added_by_members.username   AS added_by_username',
+                'guild_items.tier            AS guild_tier',
+                'character_items.list_number AS list_number',
             ])
-            ->join(    'characters',                  'characters.id',                    '=', 'character_items.character_id')
-            ->leftJoin('members AS added_by_members', 'added_by_members.id',              '=', 'character_items.added_by')
-            ->leftJoin('item_item_sources',           'items.item_id',                    '=', 'item_item_sources.item_id')
+            ->join('characters', 'characters.id', '=', 'character_items.character_id')
+            ->join('guilds AS wishlist_guilds',       'wishlist_guilds.id',  '=', 'characters.guild_id')
+            ->leftJoin('members AS added_by_members', 'added_by_members.id', '=', 'character_items.added_by')
+            ->leftJoin('item_item_sources',           'items.item_id',       '=', 'item_item_sources.item_id')
             ->leftJoin('item_sources',                'item_item_sources.item_source_id', '=', 'item_sources.id')
             ->leftJoin('instances',                   'item_sources.instance_id',         '=', 'instances.id')
             ->leftJoin('guild_items', function ($join) {
                 $join->on('guild_items.item_id', 'items.item_id')
                     ->on('guild_items.guild_id', 'characters.guild_id');
             })
-            ->where('character_items.type', Item::TYPE_WISHLIST)
+            ->where([
+                'character_items.type' => Item::TYPE_WISHLIST,
+            ])
             ->groupBy('character_items.id')
             ->orderBy('character_items.order')
             ->withPivot([
@@ -250,6 +254,7 @@ class Character extends Model
                 'added_by',
                 'type',
                 'order',
+                'list_number',
                 'is_offspec',
                 'is_received',
                 'received_at',
@@ -260,6 +265,11 @@ class Character extends Model
             ->withTimeStamps();
 
         return $query;
+    }
+
+    public function wishlist() {
+        return $this->allWishlists()
+            ->where(['character_items.list_number' => DB::raw('wishlist_guilds.current_wishlist_number')]);
     }
 
     /**
