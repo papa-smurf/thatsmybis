@@ -94,7 +94,10 @@ class CharacterLootController extends Controller
         $lockWishlist   = false;
         $unlockWishlist = false;
         if (!$guild->is_wishlist_disabled && ($guild->is_wishlist_locked && !$currentMember->hasPermission('loot.characters'))) {
-            if ($currentMember->id == $character->member_id && $currentMember->is_wishlist_unlocked) {
+            if (
+                $currentMember->id == $character->member_id
+                && ($currentMember->is_wishlist_unlocked || in_array($wishlistNumber, $guild->getWishlistLockedExceptions()))
+            ) {
                 $unlockWishlist = true;
             } else {
                 $lockWishlist = true;
@@ -222,6 +225,7 @@ class CharacterLootController extends Controller
             (!$guild->is_wishlist_locked
                 || $currentMember->hasPermission('loot.characters')
                 || ($currentMember->id == $character->member_id && $currentMember->is_wishlist_unlocked)
+                || in_array(request()->input('wishlist_number'), $guild->getWishlistLockedExceptions())
             )
         ) {
             if (request()->input('wishlist')) {
@@ -379,7 +383,7 @@ class CharacterLootController extends Controller
                 }
 
                 $audits[] = [
-                    'description'  => $currentMember->username . ' removed item from a character (' . $itemType . ')' . $message,
+                    'description'  => $currentMember->username . ' removed item from a character (' . $itemType . ($itemType == 'wishlist' && $listNumber ? " {$listNumber}" : "") . ')' . $message,
                     'type'         => $itemType,
                     'member_id'    => $currentMember->id,
                     'raid_id'      => $existingItem->pivot->raid_id,
@@ -431,7 +435,7 @@ class CharacterLootController extends Controller
                 ];
 
                 $audits[] = [
-                    'description'  => "{$currentMember->username} added item to a character ({$itemType})"
+                    'description'  => "{$currentMember->username} added item to a character ({$itemType}" . ($itemType == 'wishlist' && $listNumber ? " {$listNumber}" : "") . ")"
                         . ($isReceived ? ' (received)' : null)
                         . ($isOffspec ? ' (OS)' : null)
                         . ($itemType == Item::TYPE_RECEIVED && $markAsReceived ? ' (prios and wishlists marked received)' : null),
@@ -502,7 +506,7 @@ class CharacterLootController extends Controller
 
             if ($auditMessage) {
                 $audits[] = [
-                    'description'  => $currentMember->username . ' changed an item on ' . $character->name . ' (' . $itemType . '): ' . $auditMessage,
+                    'description'  => $currentMember->username . ' changed an item on ' . $character->name . ' (' . $itemType . ($itemType == 'wishlist' && $listNumber ? " {$listNumber}" : "") . '): ' . $auditMessage,
                     'type'         => $itemType,
                     'member_id'    => $currentMember->id,
                     'raid_id'      => isset($newValues['raid_id']) ? $newValues['raid_id'] : null,
@@ -516,7 +520,7 @@ class CharacterLootController extends Controller
 
         if ($isReordered) {
             $audits[] = [
-                'description'  => $currentMember->username . ' re-ordered items for a character (' . $itemType . ' items)',
+                'description'  => $currentMember->username . ' re-ordered items for a character (' . $itemType . ($itemType == 'wishlist' && $listNumber ? " {$listNumber}" : "") . ' items)',
                 'type'         => $itemType,
                 'member_id'    => $currentMember->id,
                 'raid_id'      => null,
