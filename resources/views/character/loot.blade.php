@@ -202,6 +202,75 @@
 
                 <div class="row mb-3 pt-2 bg-light rounded">
                     <div class="form-group mb-2 col-md-8 col-sm-10 col-12">
+                        <label for="recipes">
+                            <span class="font-weight-bold text-rare text-rare">
+                                <span class="fas fa-fw fa-book"></span>
+                                {{ __("Rare Recipes") }}
+                            </span>
+                            <small class="text-muted font-weight-normal" title="Max {{ $maxRecipes }}">{{ __("so your guildmates can see") }} &sdot;</small>
+                            <a href="{{ route('guild.recipe.list', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}" class="small font-weight-normal">
+                                {{ __("view guild recipes") }}
+                            </a>
+                        </label>
+
+                        <div class="{{ $errors->has('recipes.*') ? 'has-error' : '' }}">
+                            <input id="recipes" maxlength="40" data-max-length="40" type="text" placeholder="type an item name" class="js-item-autocomplete js-input-text form-control dark">
+                            <span class="js-loading-indicator" style="display:none;">{{ __("Searching...") }}</span>&nbsp;
+
+                            <ul class="js-sortable no-bullet no-indent mb-0">
+                                @for ($i = 0; $i < $maxRecipes; $i++)
+                                    @php
+                                        $item      = null;
+                                        $itemId    = null;
+                                        $itemLabel = null;
+
+                                        if (old('recipes.' . $i . '.item_id')) {
+                                            $itemId = old('recipes.' . $i . '.item_id');
+                                            if (old('recipes.' . $i . '.label')) {
+                                                $itemLabel = old('recipes.' . $i . '.label');
+                                            } else {
+                                                $itemLabel = $itemId;
+                                            }
+                                        } else if ($character->recipes && $character->recipes->get($i)) {
+                                            $item      = $character->recipes->get($i);
+                                            $itemId    = $item->item_id;
+                                            $itemLabel = $item->name;
+                                        }
+                                    @endphp
+                                    <li class="input-item position-relative {{ $itemId ? 'd-flex' : '' }} {{ $errors->has('recipes.' . $i . '.item_id') ? 'text-danger font-weight-bold' : '' }}"
+                                        style="{{ $itemId ? '' : 'display:none;' }}">
+                                        <input type="checkbox" checked name="recipes[{{ $i }}][item_id]" value="{{ $itemId }}" style="display:none;">
+                                        <input type="checkbox" checked name="recipes[{{ $i }}][label]" value="{{ $itemLabel }}" style="display:none;">
+                                        <input type="checkbox" checked name="recipes[{{ $i }}][pivot_id]" value="{{ $item ? $item->pivot->id : '' }}" style="display:none;"/>
+
+                                        <button type="button" class="js-input-button close close-top-right text-unselectable" aria-label="Close"><span aria-hidden="true" class="filter-button">&times;</span></button>
+
+                                        <div class="js-sort-handle move-cursor text-4 text-unselectable d-flex mr-1">
+                                            <div class="justify-content-center align-self-center">
+                                                <span class="fas fa-fw fa-grip-vertical text-muted"></span>
+                                            </div>
+                                        </div>
+
+                                        <span class="js-input-label">
+                                            <span class="js-item-display">
+                                                @includeWhen($itemId, 'partials/item', ['wowheadLink' => false, 'targetBlank' => true, 'itemId' => $itemId, 'itemName' => $itemLabel, 'itemDate' => ($item ? $item->pivot->created_at : null), 'itemUsername' => ($item ? $item->added_by_username : null)])
+                                                @include('character/partials/itemDetails', ['hideCreatedAt' => true])
+                                            </span>
+                                        </span>
+                                    </li>
+                                    @if ($errors->has('recipes.' . $i . '.item_id'))
+                                        <li class="'text-danger font-weight-bold'">
+                                            {{ $errors->first('recipes.' . $i . '.item_id') }}
+                                        </li>
+                                    @endif
+                                @endfor
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3 pt-2 bg-light rounded">
+                    <div class="form-group mb-2 col-md-8 col-sm-10 col-12">
                         <label for="received">
                             <span class="font-weight-bold text-success">
                                 <span class="fas fa-fw fa-sack"></span>
@@ -309,75 +378,6 @@
                                 </ul>
                             </div>
                         @endif
-                    </div>
-                </div>
-
-                <div class="row mb-3 pt-2 bg-light rounded">
-                    <div class="form-group mb-2 col-md-8 col-sm-10 col-12">
-                        <label for="recipes">
-                            <span class="font-weight-bold text-rare text-rare">
-                                <span class="fas fa-fw fa-book"></span>
-                                {{ __("Rare Recipes") }}
-                            </span>
-                            <small class="text-muted font-weight-normal" title="Max {{ $maxRecipes }}">{{ __("so your guildmates can see") }} &sdot;</small>
-                            <a href="{{ route('guild.recipe.list', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}" class="small font-weight-normal">
-                                {{ __("view guild recipes") }}
-                            </a>
-                        </label>
-
-                        <div class="{{ $errors->has('recipes.*') ? 'has-error' : '' }}">
-                            <input id="recipes" maxlength="40" data-max-length="40" type="text" placeholder="type an item name" class="js-item-autocomplete js-input-text form-control dark">
-                            <span class="js-loading-indicator" style="display:none;">{{ __("Searching...") }}</span>&nbsp;
-
-                            <ul class="js-sortable no-bullet no-indent mb-0">
-                                @for ($i = 0; $i < $maxRecipes; $i++)
-                                    @php
-                                        $item      = null;
-                                        $itemId    = null;
-                                        $itemLabel = null;
-
-                                        if (old('recipes.' . $i . '.item_id')) {
-                                            $itemId = old('recipes.' . $i . '.item_id');
-                                            if (old('recipes.' . $i . '.label')) {
-                                                $itemLabel = old('recipes.' . $i . '.label');
-                                            } else {
-                                                $itemLabel = $itemId;
-                                            }
-                                        } else if ($character->recipes && $character->recipes->get($i)) {
-                                            $item      = $character->recipes->get($i);
-                                            $itemId    = $item->item_id;
-                                            $itemLabel = $item->name;
-                                        }
-                                    @endphp
-                                    <li class="input-item position-relative {{ $itemId ? 'd-flex' : '' }} {{ $errors->has('recipes.' . $i . '.item_id') ? 'text-danger font-weight-bold' : '' }}"
-                                        style="{{ $itemId ? '' : 'display:none;' }}">
-                                        <input type="checkbox" checked name="recipes[{{ $i }}][item_id]" value="{{ $itemId }}" style="display:none;">
-                                        <input type="checkbox" checked name="recipes[{{ $i }}][label]" value="{{ $itemLabel }}" style="display:none;">
-                                        <input type="checkbox" checked name="recipes[{{ $i }}][pivot_id]" value="{{ $item ? $item->pivot->id : '' }}" style="display:none;"/>
-
-                                        <button type="button" class="js-input-button close close-top-right text-unselectable" aria-label="Close"><span aria-hidden="true" class="filter-button">&times;</span></button>
-
-                                        <div class="js-sort-handle move-cursor text-4 text-unselectable d-flex mr-1">
-                                            <div class="justify-content-center align-self-center">
-                                                <span class="fas fa-fw fa-grip-vertical text-muted"></span>
-                                            </div>
-                                        </div>
-
-                                        <span class="js-input-label">
-                                            <span class="js-item-display">
-                                                @includeWhen($itemId, 'partials/item', ['wowheadLink' => false, 'targetBlank' => true, 'itemId' => $itemId, 'itemName' => $itemLabel, 'itemDate' => ($item ? $item->pivot->created_at : null), 'itemUsername' => ($item ? $item->added_by_username : null)])
-                                                @include('character/partials/itemDetails', ['hideCreatedAt' => true])
-                                            </span>
-                                        </span>
-                                    </li>
-                                    @if ($errors->has('recipes.' . $i . '.item_id'))
-                                        <li class="'text-danger font-weight-bold'">
-                                            {{ $errors->first('recipes.' . $i . '.item_id') }}
-                                        </li>
-                                    @endif
-                                @endfor
-                            </ul>
-                        </div>
                     </div>
                 </div>
 
