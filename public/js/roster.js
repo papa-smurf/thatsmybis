@@ -12,6 +12,11 @@ var colRaidGroup = 8;
 var colRaidsAttended = 11;
 
 var allItemsVisible = false;
+var strikethroughVisible = true;
+var offspecVisible = true;
+
+// For making sure we don't spam request handlers to be added.
+var rosterHandlersTimeout = null;
 
 $(document).ready( function () {
    var table = createTable();
@@ -37,24 +42,17 @@ $(document).ready( function () {
     table.on('column-visibility.dt', function (e, settings, column, state) {
         // Refresh wowhead links to show stlying.
         // wowhead's script previously ignored these links if they weren't visible
-        makeWowheadLinks();
-        addClippedItemHandlers();
-        trackTimestamps();
-        parseMarkdown();
+        callRosterHandlers();
     });
 
     // Toggle visiblity for all of the clipped/hidden items on the page
     $(".js-show-all-clipped-items").click(function () {
         if (allItemsVisible) {
-            $(".js-clipped-item").hide();
-            $(".js-show-clipped-items").show();
-            $(".js-hide-clipped-items").hide();
             allItemsVisible = false;
+            resetItemVisibility();
         } else {
-            $(".js-clipped-item").show();
-            $(".js-show-clipped-items").hide();
-            $(".js-hide-clipped-items").hide();
             allItemsVisible = true;
+            showAllItems();
         }
     });
 
@@ -62,20 +60,46 @@ $(document).ready( function () {
         table.order(colRaidsAttended, 'desc').draw();
     });
 
-    addClippedItemHandlers();
+    $(".js-hide-strikethrough-items").click(function() {
+        if (strikethroughVisible) {
+            strikethroughVisible = false;
+            hideStrikethroughItems();
+        } else {
+            strikethroughVisible = true;
+            showStrikethroughItems();
+        }
+    });
+
+    $(".js-hide-offspec-items").click(function() {
+        if (offspecVisible) {
+            offspecVisible = false;
+            hideOffspecItems();
+        } else {
+            offspecVisible = true;
+            showOffspecItems();
+        }
+    });
+
+    // Dungeon multiselect could get stuck if clicked too soon
+    $(".selectpicker").selectpicker("refresh");
+
+    $(".loadingBarContainer").removeClass("d-flex").hide();
+    $("#characterDatatable").show();
+
     addInstanceFilterHandlers();
-    trackTimestamps();
+    addWishlistFilterHandlers();
+    callRosterHandlers();
 });
 
 function createTable() {
-    memberTable = $("#characterTable").DataTable({
-        "autoWidth" : false,
-        "data"      : characters,
-        "columns"   : [
+    rosterTable = $("#characterTable").DataTable({
+        autoWidth : false,
+        data      : characters,
+        columns   : [
             {
-                "title"  : `<span class="fas fa-fw fa-user"></span> ${headerCharacter} <span class="text-muted small">(${characters.length})</span>`,
-                "data"   : "character",
-                "render" : function (data, type, row) {
+                title  : `<span class="fas fa-fw fa-user"></span> ${headerCharacter} <span class="text-muted small">(${characters.length})</span>`,
+                data   : "character",
+                render : function (data, type, row) {
                     return `
                     <ul class="no-bullet no-indent mb-2">
                         <li>
@@ -116,10 +140,12 @@ function createTable() {
                                 ${ row.class ? row.class : '' }
                             </li>` : `` }
 
-                        ${ !guild.is_attendance_hidden && (row.attendance_percentage || row.raid_count) ?
+                        ${ !guild.is_attendance_hidden && (row.attendance_percentage || row.raid_count || row.benched_count) ?
                             `<li>
-                                ${ row.raid_count && typeof row.attendance_percentage === 'number' ? `<span title="attendance" class="${ getAttendanceColor(row.attendance_percentage) }">${ Math.round(row.attendance_percentage * 100) }%</span>` : '' }
-                                ${ row.raid_count ? `<span class="small text-muted">${ row.raid_count } raid${ row.raid_count > 1 ? 's' : '' }</span>` : ``}
+                                <ul class="list-inline">
+                                ${ row.raid_count && typeof row.attendance_percentage === 'number' ? `<li class="list-inline-item ${ getAttendanceColor(row.attendance_percentage) }" title="attendance">${ Math.round(row.attendance_percentage * 100) }%</li>` : '' }
+                                ${ row.raid_count ? `<li class="list-inline-item small text-muted">${ row.raid_count } raid${ row.raid_count > 1 ? 's' : '' }</li>` : ``}
+                                ${ row.benched_count ? `<li class="list-inline-item small text-muted">benched ${ row.benched_count }x</li>` : ``}
                             </li>` : `` }
 
                         ${ row.level || row.race || row.spec ? `
@@ -128,7 +154,7 @@ function createTable() {
                                     ${ row.level ? row.level : '' }
                                     <span class="font-weight-bold">
                                         ${ row.race  ? row.race : '' }
-                                        ${ row.spec  ? row.spec : '' }
+                                        ${ row.spec_label ? row.spec_label : (row.spec ? row.spec : '') }
                                     </span>
                                 </span>
                             </li>` : `` }
@@ -148,71 +174,125 @@ function createTable() {
                             ` : `` }
                     </ul>`;
                 },
-                "visible" : true,
-                "width"   : "250px",
-                "className" : "width-250",
+                visible : true,
+                width   : "250px",
+                className : "width-250",
             },
             {
-                "title"  : `<span class="text-gold fas fa-fw fa-sort-amount-down"></span> ${headerPrios}`,
-                "data"   : "prios",
-                "render" : function (data, type, row) {
-                    return data && data.length ? getItemList(data, 'prio', row.id, true) : '—';
+                title  : `<span class="text-gold fas fa-fw fa-sort-amount-down"></span> ${headerPrios}`,
+                data   : "prios",
+                render : function (data, type, row) {
+                    return data && data.length ? getItemListHtml(data, 'prio', row.id, true) : '—';
                 },
-                "orderable" : false,
-                "visible" : showPrios ? true : false,
-                "width"   : "280px",
-                "className" : "width-280",
+                orderable : false,
+                visible : showPrios ? true : false,
+                width   : "280px",
+                className : "width-280",
             },
             {
-                "title"  : `<span class="text-legendary fas fa-fw fa-scroll-old"></span> ${headerWishlist}
+                title  : `<span class="text-legendary fas fa-fw fa-scroll-old"></span> ${headerWishlist}
                     <span class="js-sort-wishlists text-link">
                         <span class="fas fa-fw fa-exchange cursor-pointer"></span>
                     </span>`,
-                "data"   : "wishlist",
-                "render" : function (data, type, row) {
+                data   : "all_wishlists",
+                render : function (data, type, row) {
+                    // This function only gets used inside this render
+                    function createWishlistHtml(data, type, row, list, wishlistNumber, showListHeader) {
+                        // Only use the currently selected wishlist
+                        data = data.filter(item => item.list_number == wishlistNumber);
+
+                        let header = null;
+
+                        if (showListHeader) {
+                            if (wishlistNames && wishlistNames[wishlistNumber]) {
+                                header = wishlistNames[wishlistNumber];
+                            } else {
+                                header = headerWishlist + ' ' + wishlistNumber;
+                            }
+                        }
+
+                        if (data.length) {
+                            // Create a copy of data, then sort it by instance_order DESC, user chosen order ASC
+                            let dataSorted = data.slice().sort((a, b) => a.instance_order - b.instance_order || a.pivot.order - b.pivot.order);
+                            list += getItemListHtml(
+                                dataSorted,
+                                'wishlist',
+                                row.id,
+                                true,
+                                true,
+                                'js-wishlist-sorted',
+                                (guild.do_sort_items_by_instance ? true : false),
+                                (showListHeader ? header : null)
+                            );
+                            list += getItemListHtml(
+                                data,
+                                'wishlist',
+                                row.id,
+                                true,
+                                false,
+                                'js-wishlist-unsorted',
+                                (guild.do_sort_items_by_instance ? false : true),
+                                (showListHeader ? header : null)
+                            );
+                        }
+
+                        return list;
+                    }
+
                     if (data && data.length) {
-                        // Create a copy of data, then sort it by instance_order DESC, user chosen order ASC
-                        let dataSorted = data.slice().sort((a, b) => a.instance_order - b.instance_order || a.pivot.order - b.pivot.order);
-                        let list = ``;
-                        list += getItemList(dataSorted, 'wishlist', row.id, true, true, 'js-wishlist-sorted', (guild.do_sort_items_by_instance ? true : false));
-                        list += getItemList(data, 'wishlist', row.id, true, false, 'js-wishlist-unsorted', (guild.do_sort_items_by_instance ? false : true));
+                        let list = '';
+                        // List number is a single number
+                        if (currentWishlistNumber) {
+                            list = createWishlistHtml(data, type, row, list, currentWishlistNumber, false);
+                        } else { // Show all wishlists
+                            // Create a new list for each wishlist number
+                            for (i = 1; i <= maxWishlistLists; i++) {
+                                list = createWishlistHtml(data, type, row, list, i, true);
+                            }
+                        }
+
+                        // Nothing in list... just show a dash.
+                        if (list == '') {
+                            list = '—';
+                        }
+
                         return list;
                     } else {
                         return '—';
                     }
                 },
-                "orderable" : false,
-                "visible" : showWishlist ? true : false,
-                "width"   : "280px",
-                "className" : "width-280",
+                orderable : false,
+                visible : showWishlist ? true : false,
+                width   : "280px",
+                className : "width-280",
             },
             {
-                "title"  : `<span class="text-success fas fa-fw fa-sack"></span> ${headerReceived}`,
-                "data"   : "received",
-                "render" : function (data, type, row) {
-                    return data && data.length ? getItemList(data, 'received', row.id) : '—';
+                title  : `<span class="text-success fas fa-fw fa-sack"></span> ${headerReceived}`,
+                data   : "received",
+                render : function (data, type, row) {
+                    return data && data.length ? getItemListHtml(data, 'received', row.id) : '—';
                 },
-                "orderable" : false,
-                "visible" : true,
-                "width"   : "280px",
-                "className" : "width-280",
+                orderable : false,
+                visible : true,
+                width   : "280px",
+                className : "width-280",
             },
             {
-                "title"  : `<span class="text-gold fas fa-fw fa-book"></span> ${headerRecipes}`,
-                "data"   : "recipes",
-                "render" : function (data, type, row) {
-                    return data && data.length ? getItemList(data, 'recipes', row.id) : '—';
+                title  : `<span class="text-gold fas fa-fw fa-book"></span> ${headerRecipes}`,
+                data   : "recipes",
+                render : function (data, type, row) {
+                    return data && data.length ? getItemListHtml(data, 'recipes', row.id) : '—';
                 },
-                "orderable" : false,
-                "visible" : false,
-                "width"   : "280px",
-                "className" : "width-280",
+                orderable : false,
+                visible : false,
+                width   : "280px",
+                className : "width-280",
             },
             {
                 /* this feature has been cut */
-                "title"  : "Roles",
-                "data"   : "user.roles",
-                "render" : function (data, type, row) {
+                title  : "Roles",
+                data   : "user.roles",
+                render : function (data, type, row) {
                     let roles = "";
                     if (data && data.length > 0) {
                         roles = '<ul class="list-inline">';
@@ -226,32 +306,32 @@ function createTable() {
                     }
                     return roles;
                 },
-                "orderable" : false,
-                "visible" : false,
+                orderable : false,
+                visible : false,
             },
             {
-                "title"  : `<span class="fas fa-fw fa-comment-alt-lines"></span> ${headerNotes}`,
-                "data"   : "public_note",
-                "render" : function (data, type, row) {
+                title  : `<span class="fas fa-fw fa-comment-alt-lines"></span> ${headerNotes}`,
+                data   : "public_note",
+                render : function (data, type, row) {
                     return getNotes(data, type, row);
                 },
-                "orderable" : false,
-                "visible" : true,
-                "width"   : "280px",
-                "className" : "width-280",
+                orderable : false,
+                visible : true,
+                width   : "280px",
+                className : "width-280",
             },
             {
-                "title"  : "Class",
-                "data"   : "class",
-                "render" : function (data, type, row) {
+                title  : "Class",
+                data   : "class",
+                render : function (data, type, row) {
                     return (row.class ? row.class : null);
                 },
-                "visible" : false,
+                visible : false,
             },
             {
-                "title"  : "Raid Group",
-                "data"   : "raid_group",
-                "render" : function (data, type, row) {
+                title  : "Raid Group",
+                data   : "raid_group",
+                render : function (data, type, row) {
                     let contents = '' + (row.raid_group_id ? row.raid_group_id : '');
                     if (row.secondary_raid_groups && row.secondary_raid_groups.length) {
                         row.secondary_raid_groups.forEach(function (raidGroup, index) {
@@ -260,85 +340,111 @@ function createTable() {
                     }
                     return contents;
                 },
-                "visible" : false,
+                visible : false,
             },
             {
-                "title"  : "Username",
-                "data"   : "username",
-                "render" : function (data, type, row) {
+                title  : "Username",
+                data   : "username",
+                render : function (data, type, row) {
                     return (row.username ? row.username : null);
                 },
-                "visible" : false,
+                visible : false,
             },
             {
-                "title"  : "Discord Username",
-                "data"   : "discord_username",
-                "render" : function (data, type, row) {
+                title  : "Discord Username",
+                data   : "discord_username",
+                render : function (data, type, row) {
                     return (row.discord_username ? row.discord_username : null);
                 },
-                "visible" : false,
+                visible : false,
             },
             {
-                "title"  : "Raids Attended",
-                "data"   : "raid_count",
-                "render" : function (data, type, row) {
+                title  : "Raids Attended",
+                data   : "raid_count",
+                render : function (data, type, row) {
                     return (row.raid_count ? row.raid_count : null);
                 },
-                "visible"    : false,
-                "searchable" : false,
+                visible    : false,
+                searchable : false,
+            },
+            {
+                title  : "Benched Count",
+                data   : "benched_count",
+                render : function (data, type, row) {
+                    return (row.benched_count ? row.benched_count : null);
+                },
+                visible    : false,
+                searchable : false,
             },
         ],
-        "order"  : [], // Disable initial auto-sort; relies on server-side sorting
-        "paging" : false,
-        "fixedHeader" : true, // Header row sticks to top of window when scrolling down
+        order  : [], // Disable initial auto-sort; relies on server-side sorting
+        paging : false,
+        fixedHeader : true, // Header row sticks to top of window when scrolling down
+        drawCallback : function () {
+            callRosterHandlers();
+        },
         initComplete: function () {
-            let sortColumns = [colClass, colRaidGroup];
+            // Columns that we want to filter by.
+            const filterColumns = [colClass, colRaidGroup];
+
+            // For each column, set up a filter
             this.api().columns().every(function (index) {
                 var column = this;
 
+                // select1 is the first filter for this column
                 let select1 = null;
-                let select2 = null; // Initialize this beside select1 if we want a secondary sort
+                // select2 is the second filter for this column
+                let select2 = null; // Initialize this beside select1 if we want a secondary sort for the same column
 
+                // Based on the current column, identify the relevant filter input
                 if (index == colClass) {
                     select1 = $("#class_filter");
                     select2 = null;
-                }
-
-                if (index == colRaidGroup) {
+                } else if (index == colRaidGroup) {
                     select1 = $("#raid_group_filter");
                     select2 = null;
                 }
 
-                if (sortColumns.includes(index)) {
+                if (filterColumns.includes(index)) {
                     select1.on('change', function () {
-                        var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                        const val = $.fn.dataTable.util.escapeRegex($(this).val());
+
+                        // Only IF we are using the second select
                         if (select2 && select2.val()) {
                             // Must contain both
                             val = "(?=.*" + val + ")(?=.*" + $.fn.dataTable.util.escapeRegex(select2.val()) + ")";
                         }
+
                         column.search(val ? val : '', true, false).draw();
                     }).change();
 
                     if (select2) {
                         select2.on('change', function () {
-                            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                            const val = $.fn.dataTable.util.escapeRegex($(this).val());
+
                             if (select1 && select1.val()) {
                                 // Must contain both
                                 val = "(?=.*" + val + ")(?=.*" + $.fn.dataTable.util.escapeRegex(select1.val()) + ")";
                             }
+
                             column.search(val ? val : '', true, false).draw();
                         }).change();
                     }
                 }
-            } );
-            makeWowheadLinks();
-            addItemAutocompleteHandler();
-            addTagInputHandlers();
-            addWishlistSortHandlers();
-            parseMarkdown();
+
+                // Only show rows that have the desired item in the wishlist
+                if (typeof filterWishlistsByItemName !== 'undefined' && filterWishlistsByItemName && index == colWishlist) {
+                    $("#wishlist_filter").on('change', function () {
+                        // If we filter wishlists to decide whether or not it contains the name(s) of given item(s)
+                        const regex = "(" + itemNames.join("|") + ")";
+                        column.search(regex, true, false).draw();
+                    });
+                }
+            });
+            callRosterHandlers();
         }
     });
-    return memberTable;
+    return rosterTable;
 }
 
 function addClippedItemHandlers() {
@@ -348,6 +454,12 @@ function addClippedItemHandlers() {
         $(".js-clipped-item[data-id='" + id + "'][data-type='" + type + "']").show();
         $(".js-show-clipped-items[data-id='" + id + "'][data-type='" + type + "']").hide();
         $(".js-hide-clipped-items[data-id='" + id + "'][data-type='" + type + "']").show();
+        if (!strikethroughVisible) {
+            hideStrikethroughItems();
+        }
+        if (!offspecVisible) {
+            hideOffspecItems();
+        }
     });
     $(".js-hide-clipped-items").click(function () {
         let id = $(this).data("id");
@@ -360,8 +472,8 @@ function addClippedItemHandlers() {
 
 function addInstanceFilterHandlers() {
     $("#instance_filter").change(function () {
-        let instanceId = $("#instance_filter").val();
-        if (instanceId) {
+        let instanceIds = $("#instance_filter").val();
+        if (instanceIds.length) {
             // Show all items, then remove the visible/hidden filters; they interfere with this filter.
             allItemsVisible = false;
             $(".js-show-all-clipped-items").click();
@@ -369,12 +481,21 @@ function addInstanceFilterHandlers() {
             $(".js-show-clipped-items").hide();
             $(".js-hide-clipped-items").hide();
 
-            // hide all other instance's items
-            $("li.js-has-instance[data-instance-id='" + instanceId + "']").show();
-            $("li.js-has-instance[data-instance-id!='" + instanceId + "']").hide();
+            // Start with all instanced items hidden
+            $("li.js-has-instance").hide();
+
+            // Create a list of the instances we want to show
+            let selectorsToShow = "";
+            instanceIds.forEach(instanceId => {
+                selectorsToShow += "li.js-has-instance[data-instance-id='" + instanceId + "'],";
+            });
+            selectorsToShow = selectorsToShow.replace(/(^,)|(,$)/g, ""); // Trim trailing commas
+
+            // Show the instances we want
+            $(selectorsToShow).show();
         } else {
-            // show all instance's items
-            $("li.js-has-instance[data-instance-id]").show();
+            // show all instanced items
+            $("li.js-has-instance").show();
 
             // Reset the visible/hidden filters to their default state.
             allItemsVisible = true;
@@ -384,12 +505,23 @@ function addInstanceFilterHandlers() {
             $(".js-hide-clipped-items").hide();
         }
     });
+}
 
+function addWishlistFilterHandlers() {
+    $("#wishlist_filter").on('change', function () {
+        currentWishlistNumber = $(this).val();
+        rosterTable.rows().invalidate().draw();
+    }).change();
 }
 
 // Gets an HTML list of items with pretty wowhead formatting
-function getItemList(data, type, characterId, useOrder = false, showInstances = false, listClass = null, isVisible = true) {
+function getItemListHtml(data, type, characterId, useOrder = false, showInstances = false, listClass = null, isVisible = true, header = null) {
     let items = `<ol class="no-indent js-item-list mb-2 ${ listClass }" data-type="${ type }" data-id="${ characterId }" style="${ isVisible ? '' : 'display:none;' }">`;
+
+    if (header) {
+        items += `<li class="small text-muted no-bullet " data-type="${ type }" data-id="${ characterId }">${header}</li>`;
+    }
+
     let initialLimit = 4;
 
     let lastInstanceId = null;
@@ -449,7 +581,9 @@ function getItemList(data, type, characterId, useOrder = false, showInstances = 
             <li class="js-has-instance font-weight-normal ${ clipItem ? 'js-clipped-item' : '' }"
                 data-type="${ type }"
                 data-id="${ characterId }"
+                data-offspec="${ item.pivot.is_offspec ? 1 : 0 }"
                 data-instance-id="${ item.instance_id }"
+                data-wishlist-number="${item.list_number}"
                 value="${ useOrder ? item.pivot.order : '' }"
                 style="${ clipItem ? 'display:none;' : '' }">
                 ${ guild.tier_mode ?
@@ -489,4 +623,55 @@ function getNotes(data, type, row) {
     return (row.public_note ? `<span class="js-markdown-inline">${ DOMPurify.sanitize(nl2br(row.public_note)) }</span>` : '—')
         + (row.officer_note ? `<br><small class="font-weight-bold font-italic text-gold">Officer\'s Note</small><br><span class="js-markdown-inline">${ DOMPurify.sanitize(nl2br(row.officer_note)) }</span>` : '')
         + (secondaryRaidGroups ? `<br>${secondaryRaidGroups}` : ``);
+}
+
+function hideOffspecItems() {
+    $("[data-offspec='1']").hide();
+}
+
+function showOffspecItems() {
+    $("[data-offspec='1']:not(.js-clipped-item)").show();
+}
+
+function hideStrikethroughItems() {
+    $("[data-type='prio']").children(".font-strikethrough").parent().hide();
+    $("[data-type='wishlist']").children(".font-strikethrough").parent().hide();
+}
+
+function showStrikethroughItems() {
+    $("[data-type='prio']:not(.js-clipped-item)").children(".font-strikethrough").parent().show();
+    $("[data-type='wishlist']:not(.js-clipped-item)").children(".font-strikethrough").parent().show();
+}
+
+function resetItemVisibility() {
+    $(".js-clipped-item").hide();
+    $(".js-show-clipped-items").show();
+    $(".js-hide-clipped-items").hide();
+}
+
+// In order to prevent these handlers from accidentally being called over and over,
+// add them on a timeout. If the timeout hasn't reached 0, and this function is called
+// again, the timer will start over and the contained scripts will never have been run.
+function callRosterHandlers() {
+    rosterHandlersTimeout ? clearTimeout(rosterHandlersTimeout) : null;
+    rosterHandlersTimeout = setTimeout(function () {
+        makeWowheadLinks();
+        addClippedItemHandlers();
+        addWishlistSortHandlers();
+        parseMarkdown();
+        trackTimestamps();
+
+        // We should set visibility based on the previous setting.
+        if (allItemsVisible) {
+            showAllItems();
+        } else {
+            resetItemVisibility();
+        }
+    }, 500); // 0.5s delay
+}
+
+function showAllItems() {
+    $(".js-clipped-item").show();
+    $(".js-show-clipped-items").hide();
+    $(".js-hide-clipped-items").hide();
 }

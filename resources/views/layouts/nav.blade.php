@@ -353,11 +353,9 @@
                         <a class="dropdown-item" href="{{ route('item.assignLoot.list', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
                             {{ __("Old Loot Assignments") }}
                         </a>
-                        @if ($viewRaids)
-                            <a class="dropdown-item" href="{{ route('guild.raidGroups', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
-                                {{ __("Raid Groups") }}
-                            </a>
-                        @endif
+                        <a class="dropdown-item" href="{{ route('guild.raidGroups', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
+                            {{ __("Raid Groups") }}
+                        </a>
                         @if (!$guild->is_attendance_hidden && $guild->raidGroups->count())
                             <div class="dropdown dropright">
                                 <a title="{{ __("Only show attendance for a specific raid group") }}" class="dropdown-item dropdown-toggle" href="#" id="raidGroupAttendanceFilter" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -412,6 +410,15 @@
 
                         <a class="dropdown-item" href="{{ route('guild.exports', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
                             {{ __("Exports") }}
+                        </a>
+                        <form role="form" method="POST" target="_blank" action="{{ route('guild.export.gargul', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
+                            {{ csrf_field() }}
+                            <button class="dropdown-item text-white" type="submit">
+                                {{ __("Export Gargul") }}
+                            </button>
+                        </form>
+                        <a class="dropdown-item" target="_blank" href="{{ route('guild.export.addonItems', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'fileType' => 'html']) }}">
+                            {{ __("Export TMB Tooltips") }}
                         </a>
                         <a class="dropdown-item" href="{{ route('guild.members.list', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
                             {{ __("Members") }}

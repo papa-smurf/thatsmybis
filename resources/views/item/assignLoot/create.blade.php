@@ -192,7 +192,9 @@ If note, response, public note, or officer note are equal to 'OS', offspec flag 
                                     $itemId    = 'item.' . $i . '.id';
                                     $itemLabel = 'item.' . $i . '.label';
                                 @endphp
-                                <div class="row striped-light pb-4 pt-4 rounded {{ $i > 2 ? 'js-hide-empty' : '' }}" style="{{ ($i > 2) && old('item.' . $i . '.id') == null && old('item.' . $i . '.character_id') == null ? 'display:none;' : '' }}">
+                                <div id="item{{ $i }}" class="row striped-light pb-4 pt-4 rounded {{ $i > 2 ? 'js-hide-empty' : '' }}" style="{{ ($i > 2) && old('item.' . $i . '.id') == null && old('item.' . $i . '.character_id') == null ? 'display:none;' : '' }}">
+
+                                    <span data-index="{{ $i }}" class="js-remove-item fas fa-fw fa-times text-danger cursor-pointer top-right" title="{{ __('Clear this row') }}"></span>
 
                                     <!-- Item input -->
                                     <div class="col-lg-3 col-sm-6 col-12">
@@ -366,7 +368,7 @@ If note, response, public note, or officer note are equal to 'OS', offspec flag 
 
                                     <!-- Import ID -->
                                     <div class="js-import-id col-lg-3 col-sm-6 col-12" style="{{ old('item.' . $i . '.import_id') ? '' : 'display:none;' }}">
-                                        <div class="form-group mb-0 {{ $errors->has('item.' . $i . '.received_at') ? 'text-danger font-weight-bold' : '' }}">
+                                        <div class="form-group mb-0 {{ $errors->has('item.' . $i . '.import_id') ? 'text-danger font-weight-bold' : '' }}">
 
                                             <label for="item[{{ $i }}][import_id]" class="font-weight-bold">
                                                 @if ($i == 0)

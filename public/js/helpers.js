@@ -11,6 +11,9 @@ const TIERS = {
     6: 'F',
 };
 
+// How often to update timestamps
+var timestampCheckRate = 60000;
+
 // For keeping track of the intervals updating times
 var timestampUpdateInterval = null;
 
@@ -163,6 +166,11 @@ function cleanUrl(sanitize, base, href) {
 
 function decToHex(number) {
     return parseInt(number).toString(16);
+}
+
+// Take a jquery element, make that element visually flash to get the user's attention
+function flashElement(element) {
+    element.fadeTo(100, 0.3, function() { $(this).fadeTo(500, 1.0); });
 }
 
 // Based on attendance percentage, return a CSS color class
@@ -388,7 +396,7 @@ function slug(string) {
  *
  * @param rate How frequently the timestamps should be updated.
  */
-function trackTimestamps(rate = 15000) {
+function trackTimestamps(rate = timestampCheckRate) {
     $(".js-watchable-timestamp").each(function () {
         let isShort = $(this).data("isShort");
 

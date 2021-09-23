@@ -33,16 +33,21 @@
                     </li>
                 @endif
                 <li class="list-inline-item">
-                    {{ $character->spec  ? $character->spec : '' }}
-                    {{ $character->class ? $character->class : '' }}
+                    {{ $character->archetype ? $character->display_archetype : '' }}
+                    {{ $character->spec  ? $character->display_spec : '' }}
+                    {{ $character->class ? $character->display_class : '' }}
                 </li>
             </ul>
         </li>
     @endif
 
-    @if (!$guild->is_attendance_hidden && (isset($character->attendance_percentage) || isset($character->raid_count)))
+    @if (!$guild->is_attendance_hidden && (isset($character->attendance_percentage) || isset($character->raid_count) || isset($character->benched_count)))
         <li class="small">
-            @include('partials/attendanceTag', ['attendancePercentage' => $character->attendance_percentage, 'raidCount' => $character->raid_count])
+            @include('partials/attendanceTag', [
+                'attendancePercentage' => $character->attendance_percentage,
+                'benchedCount'         => $character->benched_count,
+                'raidCount'            => $character->raid_count,
+            ])
         </li>
     @endif
 

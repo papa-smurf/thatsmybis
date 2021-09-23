@@ -2,10 +2,9 @@
 
 namespace App;
 
-use App\{Batch, Character, Guild, Instance, Item, Member, RaidGroup};
-use Illuminate\Database\Eloquent\Model;
+use App\{BaseModel, Batch, Character, Guild, Instance, Item, Member, RaidGroup};
 
-class Raid extends Model
+class Raid extends BaseModel
 {
     const REMARK_LATE            = 'Late';
     const REMARK_UNPREPARED      = 'Unprepared';
@@ -13,15 +12,6 @@ class Raid extends Model
     const REMARK_NO_SHOW         = 'No call, no show';
     const REMARK_AWAY            = 'Gave notice';
     const REMARK_BENCHED         = 'Benched';
-
-    const REMARKS = [
-        1 => self::REMARK_LATE,
-        2 => self::REMARK_UNPREPARED,
-        3 => self::REMARK_LATE_UNPREPARED,
-        4 => self::REMARK_NO_SHOW,
-        5 => self::REMARK_AWAY,
-        6 => self::REMARK_BENCHED,
-    ];
 
     /**
      * The attributes that are mass assignable.
@@ -72,7 +62,15 @@ class Raid extends Model
         $query = $this
             ->belongsToMany(Item::class, 'character_items', 'raid_id', 'item_id')
             ->select([
-                'items.*',
+                'items.id',
+                'items.item_id',
+                'items.parent_id',
+                'items.parent_item_id',
+                'items.expansion_id',
+                'items.name',
+                'items.weight',
+                'items.quality',
+                'items.inventory_type',
                 'characters.id             AS character_id',
                 'characters.name           AS character_name',
                 'characters.class          AS character_class',
@@ -122,6 +120,13 @@ class Raid extends Model
     }
 
     static public function remarks() {
-        return self::REMARKS;
+        return [
+            1 => __('Late'),
+            2 => __('Unprepared'),
+            3 => __('Late & unprepared'),
+            4 => __('No call, no show'),
+            5 => __('Gave notice'),
+            6 => __('Benched'),
+        ];
     }
 }

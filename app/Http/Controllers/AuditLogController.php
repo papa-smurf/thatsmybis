@@ -145,6 +145,10 @@ class AuditLogController extends Controller
             $query = $query->where('audit_logs.created_at', '<',  request()->input('max_date'));
         }
 
+        if (!empty(request()->input('character_class'))) {
+            $query = $query->where('characters.class', request()->input('character_class'));
+        }
+
         if (!empty(request()->input('character_id'))) {
             $query = $query->where('characters.id', request()->input('character_id'));
             $resources[] = Character::where([['guild_id', $guild->id], ['id', request()->input('character_id')]])->with('member')->first();

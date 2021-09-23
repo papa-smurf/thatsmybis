@@ -1,5 +1,5 @@
 @php
-    $raidGroup = ($character->raid_group_id ? $guild->raidGroups->where('id', $character->raid_group_id)->first() : null);
+    $raidGroup = ($character->raid_group_id ? $guild->allRaidGroups->where('id', $character->raid_group_id)->first() : null);
 @endphp
 <li class="list-inline-item text-{{ $character->inactive_at ? 'muted' : strtolower($character->class) }}">
     <div class="dropdown">
@@ -14,7 +14,12 @@
             @endif
             @if (!$guild->is_attendance_hidden)
                 <span class="small">
-                    @include('partials/attendanceTag', ['attendancePercentage' => $character->attendance_percentage, 'raidCount' => $character->raid_count, 'smallRaid' => false])
+                    @include('partials/attendanceTag', [
+                        'attendancePercentage' => $character->attendance_percentage,
+                        'benchedCount'         => $character->benched_count,
+                        'raidCount'            => $character->raid_count,
+                        'smallRaid'            => false
+                    ])
                 </span>
             @endif
         </a>

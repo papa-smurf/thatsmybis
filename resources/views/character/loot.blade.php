@@ -48,7 +48,14 @@
                                 <ol class="lesser-indent">
                                     @foreach ($character->prios as $item)
                                         <li value="{{ $item->pivot->order }}">
-                                            @include('partials/item', ['wowheadLink' => false, 'itemDate' => $item->pivot->created_at, 'itemUsername' => $item->added_by_username, 'strikeThrough' => $item->pivot->is_received])
+                                            @include('partials/item', [
+                                                'wowheadLink'   => false,
+                                                'itemDate'      => $item->pivot->created_at,
+                                                'itemUsername'  => $item->added_by_username,
+                                                'showTier'      => true,
+                                                'strikeThrough' => $item->pivot->is_received,
+                                                'tierMode'      => $guild->tier_mode,
+                                            ])
                                             @include('character/partials/itemDetails', ['hideCreatedAt' => true])
                                         </li>
                                     @endforeach
@@ -65,6 +72,7 @@
                 @if (!$guild->is_wishlist_disabled)
                     @php
                         $wishlistLockedExceptions = $guild->getWishlistLockedExceptions();
+                        $wishlistNames = $guild->getWishlistNames();
                     @endphp
                     <div class="row mb-3 pt-2 bg-light rounded">
                         <div class="form-group mb-2 col-md-8 col-sm-10 col-12">
@@ -75,7 +83,12 @@
                             <div class="dropdown">
                                 <a class="dropdown-toggle font-weight-bold text-legendary" id="wishlistDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     <span class="fas fa-fw fa-scroll-old"></span>
-                                    {{ __("Wishlist") }} {{ $wishlistNumber }}
+                                    @if ($wishlistNames && $wishlistNames[$wishlistNumber - 1])
+                                        {{ $wishlistNames[$wishlistNumber - 1] }}
+                                    @else
+                                        {{ __("Wishlist") }} {{ $wishlistNumber }}
+                                    @endif
+
                                     @if ($guild->current_wishlist_number == $wishlistNumber)
                                         <span class="text-success">{{ __('(active)') }}</span>
                                     @else
@@ -83,17 +96,29 @@
                                     @endif
                                 </a>
                                 <div class="dropdown-menu" aria-labelledby="wishlistDropdown">
+                                    <a class="dropdown-item disabled" href="#" tabindex="-1" aria-disabled="true">
+                                        {{ __("active/locked is controlled by GM") }}
+                                        <br>
+                                        @if ($character->member && $character->member->is_wishlist_unlocked)
+                                            {{ __("officers have unlocked your wishlists") }}
+                                        @endif
+                                    </a>
                                     @for ($i = 1; $i <= $maxWishlistLists; $i++)
                                         <a class="dropdown-item"
                                             href="{{ route('character.loot', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'characterId' => $character->id, 'nameSlug' => $character->slug, 'wishlist_number' => $i]) }}">
-                                            {{ __("Wishlist") }} {{ $i }}
+                                            @if ($wishlistNames && $wishlistNames[$i - 1])
+                                                {{ $wishlistNames[$i - 1] }}
+                                            @else
+                                                {{ __("Wishlist") }} {{ $i }}
+                                            @endif
+
                                             @if ($guild->current_wishlist_number == $i)
                                                 <span class="text-success">{{ __('(active)') }}</span>
                                             @else
                                                 <span class="text-danger">{{ __('(inactive)') }}</span>
                                             @endif
                                             @if ($guild->is_wishlist_locked)
-                                                @if (in_array($i, $wishlistLockedExceptions))
+                                                @if (in_array($i, $wishlistLockedExceptions) || ($character->member && $character->member->is_wishlist_unlocked))
                                                     <span class="text-gold">{{ __('(unlocked)') }}</span>
                                                 @else
                                                     <span class="text-muted">{{ __('(locked)') }}</span>
@@ -174,13 +199,15 @@
                                                 <div class="js-input-label">
                                                     <span class="js-item-display">
                                                         @includeWhen($itemId, 'partials/item', [
-                                                            'wowheadLink' => false,
-                                                            'targetBlank' => true,
-                                                            'itemId' => $itemId,
-                                                            'itemName' => $itemLabel,
-                                                            'itemDate' => ($item ? ($item->pivot->received_at ? $item->pivot->received_at : $item->pivot->created_at) : null),
-                                                            'itemUsername' => ($item ? $item->added_by_username : null),
-                                                            'strikeThrough' => ($item ? $item->pivot->is_received : null)
+                                                            'wowheadLink'   => false,
+                                                            'targetBlank'   => true,
+                                                            'itemId'        => $itemId,
+                                                            'itemName'      => $itemLabel,
+                                                            'itemDate'      => ($item ? ($item->pivot->received_at ? $item->pivot->received_at : $item->pivot->created_at) : null),
+                                                            'itemUsername'  => ($item ? $item->added_by_username : null),
+                                                            'showTier'      => true,
+                                                            'strikeThrough' => ($item ? $item->pivot->is_received : null),
+                                                            'tierMode'      => $guild->tier_mode,
                                                         ])
                                                         @include('character/partials/itemDetails', ['hideCreatedAt' => true])
                                                     </span>
@@ -199,6 +226,124 @@
                         </div>
                     </div>
                 @endif
+
+                <div class="row mb-3 pt-2 bg-light rounded">
+                    <div class="form-group mb-2 col-md-8 col-sm-10 col-12">
+                        <label for="received">
+                            <span class="font-weight-bold text-success">
+                                <span class="fas fa-fw fa-sack"></span>
+                                {{ __("Loot Received") }}
+                            </span>
+
+                            @if ($lockReceived)
+                                <small class="text-warning font-weight-normal">{{ __("locked by your guild master(s)") }}</small>
+                            @elseif (!$unlockReceived && $guild->is_received_locked)
+                                <small class="text-warning font-weight-normal">{{ __("locked for raiders") }}</small> <small class="text-muted font-weight-normal">{{ __("max") }} {{ $maxReceivedItems }}</small>
+                            @else
+                                <small class="text-muted font-weight-normal">{{ __("max") }} {{ $maxReceivedItems }}</small>
+                            @endif
+                        </label>
+
+                        @if (!$lockReceived)
+                            <div class="form-group mb-0">
+                                <div class="checkbox">
+                                    <label>
+                                        <input checked type="checkbox" name="mark_as_received" value="1" class="" autocomplete="off">
+                                            <small class="text-muted">{{ __("when adding items, mark prios and wishlist as received") }}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($lockReceived)
+                            @if ($character->received->count() > 0)
+                                <ul class="lesser-indent no-bullet">
+                                    @foreach ($character->received as $item)
+                                        <li class="mb-2" value="{{ $item->pivot->order ? $item->pivot->order : '' }}">
+                                            @include('partials/item', [
+                                                'wowheadLink'  => false,
+                                                'itemDate'     => ($item ? ($item->pivot->received_at ? $item->pivot->received_at : $item->pivot->created_at) : null),
+                                                'itemUsername' => $item->added_by_username,
+                                                'showTier'     => true,
+                                                'tierMode'     => $guild->tier_mode,
+                                            ])
+                                            @include('character/partials/itemDetails', ['hideCreatedAt' => true])
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @else
+                                <div class="pl-4">
+                                    —
+                                </div>
+                            @endif
+                        @else
+                            <div class="{{ $errors->has('received.*') ? 'has-error' : '' }}">
+                                <input id="received" maxlength="40" data-max-length="40" type="text" placeholder="type an item name" class="js-item-autocomplete js-input-text form-control dark">
+                                <span class="js-loading-indicator" style="display:none;">{{ __("Searching...") }}</span>&nbsp;
+
+                                <ul class="js-sortable-lazy no-bullet no-indent mb-0 bg-light">
+                                    @for ($i = 0; $i < $maxReceivedItems; $i++)
+                                        @php
+                                            $item      = null;
+                                            $itemId    = null;
+                                            $itemLabel = null;
+
+                                            if (old('received.' . $i . '.item_id')) {
+                                                $itemId = old('received.' . $i . '.item_id');
+                                                if (old('received.' . $i . '.label')) {
+                                                    $itemLabel = old('received.' . $i . '.label');
+                                                } else {
+                                                    $itemLabel = $itemId;
+                                                }
+                                            } else if ($character->received && $character->received->get($i)) {
+                                                $item      = $character->received->get($i);
+                                                $itemId    = $item->item_id;
+                                                $itemLabel = $item->name;
+                                            }
+                                        @endphp
+                                        <li class="input-item position-relative {{ $itemId ? 'd-flex' : '' }} {{ $errors->has('received.' . $i . '.item_id') ? 'text-danger font-weight-bold' : '' }}"
+                                            style="{{ $itemId ? '' : 'display:none;' }}">
+                                            <input type="checkbox" checked name="received[{{ $i }}][item_id]" value="{{ $itemId }}" style="display:none;" />
+                                            <input type="checkbox" checked name="received[{{ $i }}][label]" value="{{ $itemLabel }}" style="display:none;" />
+                                            <input type="checkbox" checked name="received[{{ $i }}][pivot_id]" value="{{ $item ? $item->pivot->id : '' }}" style="display:none;"/>
+
+                                            <button type="button" class="js-input-button close close-top-right text-unselectable" aria-label="Close"><span aria-hidden="true" class="filter-button">&times;</span></button>
+
+                                            <div class="js-sort-handle move-cursor d-flex text-4 text-unselectable mr-1">
+                                                <div class="justify-content-center align-self-center">
+                                                    <span class="fas fa-fw fa-grip-vertical text-muted"></span>
+                                                </div>
+                                            </div>
+
+                                            <div class="js-input-label">
+                                                <span class="js-item-display">
+                                                    @includeWhen($itemId, 'partials/item', [
+                                                        'wowheadLink'   => false,
+                                                        'targetBlank'   => true,
+                                                        'itemId'        => $itemId,
+                                                        'itemName'      => $itemLabel,
+                                                        'itemDate'      => ($item ? ($item->pivot->received_at ? $item->pivot->received_at : $item->pivot->created_at) : null),
+                                                        'itemUsername'  => ($item ? $item->added_by_username : null),
+                                                        'showTier'      => true,
+                                                        'strikeThrough' => ($item ? $item->pivot->is_received : null),
+                                                        'tierMode'      => $guild->tier_mode,
+                                                    ])
+                                                    @include('character/partials/itemDetails', ['hideCreatedAt' => true])
+                                                </span>
+                                                @include('character/partials/itemEdit', ['name' => 'received', 'index' => $i])
+                                            </div>
+                                        </li>
+                                        @if ($errors->has('received.' . $i . '.item_id'))
+                                            <li class="'text-danger font-weight-bold'">
+                                                {{ $errors->first('received.' . $i . '.item_id') }}
+                                            </li>
+                                        @endif
+                                    @endfor
+                                </ul>
+                            </div>
+                        @endif
+                    </div>
+                </div>
 
                 <div class="row mb-3 pt-2 bg-light rounded">
                     <div class="form-group mb-2 col-md-8 col-sm-10 col-12">
@@ -253,7 +398,16 @@
 
                                         <span class="js-input-label">
                                             <span class="js-item-display">
-                                                @includeWhen($itemId, 'partials/item', ['wowheadLink' => false, 'targetBlank' => true, 'itemId' => $itemId, 'itemName' => $itemLabel, 'itemDate' => ($item ? $item->pivot->created_at : null), 'itemUsername' => ($item ? $item->added_by_username : null)])
+                                                @includeWhen($itemId, 'partials/item', [
+                                                    'wowheadLink'  => false,
+                                                    'targetBlank'  => true,
+                                                    'itemId'       => $itemId,
+                                                    'itemName'     => $itemLabel,
+                                                    'itemDate'     => ($item ? $item->pivot->created_at : null),
+                                                    'itemUsername' => ($item ? $item->added_by_username : null),
+                                                    'showTier'     => true,
+                                                    'tierMode'     => $guild->tier_mode,
+                                                ])
                                                 @include('character/partials/itemDetails', ['hideCreatedAt' => true])
                                             </span>
                                         </span>
@@ -266,118 +420,6 @@
                                 @endfor
                             </ul>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row mb-3 pt-2 bg-light rounded">
-                    <div class="form-group mb-2 col-md-8 col-sm-10 col-12">
-                        <label for="received">
-                            <span class="font-weight-bold text-success">
-                                <span class="fas fa-fw fa-sack"></span>
-                                {{ __("Loot Received") }}
-                            </span>
-
-                            @if ($lockReceived)
-                                <small class="text-warning font-weight-normal">{{ __("locked by your guild master(s)") }}</small>
-                            @elseif (!$unlockReceived && $guild->is_received_locked)
-                                <small class="text-warning font-weight-normal">{{ __("locked for raiders") }}</small> <small class="text-muted font-weight-normal">{{ __("max") }} {{ $maxReceivedItems }}</small>
-                            @else
-                                <small class="text-muted font-weight-normal">{{ __("max") }} {{ $maxReceivedItems }}</small>
-                            @endif
-                        </label>
-
-                        <div class="form-group mb-0">
-                            <div class="checkbox">
-                                <label>
-                                    <input checked type="checkbox" name="mark_as_received" value="1" class="" autocomplete="off">
-                                        <small class="text-muted">{{ __("when adding items, mark prios and wishlist as received") }}</small>
-                                </label>
-                            </div>
-                        </div>
-
-                        @if ($lockReceived)
-                            @if ($character->received->count() > 0)
-                                <ul class="lesser-indent no-bullet">
-                                    @foreach ($character->received as $item)
-                                        <li class="mb-2" value="{{ $item->pivot->order ? $item->pivot->order : '' }}">
-                                            @include('partials/item', [
-                                                'wowheadLink' => false,
-                                                'itemDate' => ($item ? ($item->pivot->received_at ? $item->pivot->received_at : $item->pivot->created_at) : null),
-                                                'itemUsername' => $item->added_by_username
-                                            ])
-                                            @include('character/partials/itemDetails', ['hideCreatedAt' => true])
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            @else
-                                <div class="pl-4">
-                                    —
-                                </div>
-                            @endif
-                        @else
-                            <div class="{{ $errors->has('received.*') ? 'has-error' : '' }}">
-                                <input id="received" maxlength="40" data-max-length="40" type="text" placeholder="type an item name" class="js-item-autocomplete js-input-text form-control dark">
-                                <span class="js-loading-indicator" style="display:none;">{{ __("Searching...") }}</span>&nbsp;
-
-                                <ul class="js-sortable-lazy no-bullet no-indent mb-0 bg-light">
-                                    @for ($i = 0; $i < $maxReceivedItems; $i++)
-                                        @php
-                                            $item      = null;
-                                            $itemId    = null;
-                                            $itemLabel = null;
-
-                                            if (old('received.' . $i . '.item_id')) {
-                                                $itemId = old('received.' . $i . '.item_id');
-                                                if (old('received.' . $i . '.label')) {
-                                                    $itemLabel = old('received.' . $i . '.label');
-                                                } else {
-                                                    $itemLabel = $itemId;
-                                                }
-                                            } else if ($character->received && $character->received->get($i)) {
-                                                $item      = $character->received->get($i);
-                                                $itemId    = $item->item_id;
-                                                $itemLabel = $item->name;
-                                            }
-                                        @endphp
-                                        <li class="input-item position-relative {{ $itemId ? 'd-flex' : '' }} {{ $errors->has('received.' . $i . '.item_id') ? 'text-danger font-weight-bold' : '' }}"
-                                            style="{{ $itemId ? '' : 'display:none;' }}">
-                                            <input type="checkbox" checked name="received[{{ $i }}][item_id]" value="{{ $itemId }}" style="display:none;" />
-                                            <input type="checkbox" checked name="received[{{ $i }}][label]" value="{{ $itemLabel }}" style="display:none;" />
-                                            <input type="checkbox" checked name="received[{{ $i }}][pivot_id]" value="{{ $item ? $item->pivot->id : '' }}" style="display:none;"/>
-
-                                            <button type="button" class="js-input-button close close-top-right text-unselectable" aria-label="Close"><span aria-hidden="true" class="filter-button">&times;</span></button>
-
-                                            <div class="js-sort-handle move-cursor d-flex text-4 text-unselectable mr-1">
-                                                <div class="justify-content-center align-self-center">
-                                                    <span class="fas fa-fw fa-grip-vertical text-muted"></span>
-                                                </div>
-                                            </div>
-
-                                            <div class="js-input-label">
-                                                <span class="js-item-display">
-                                                    @includeWhen($itemId, 'partials/item', [
-                                                        'wowheadLink' => false,
-                                                        'targetBlank' => true,
-                                                        'itemId' => $itemId,
-                                                        'itemName' => $itemLabel,
-                                                        'itemDate' => ($item ? ($item->pivot->received_at ? $item->pivot->received_at : $item->pivot->created_at) : null),
-                                                        'itemUsername' => ($item ? $item->added_by_username : null),
-                                                        'strikeThrough' => ($item ? $item->pivot->is_received : null)
-                                                    ])
-                                                    @include('character/partials/itemDetails', ['hideCreatedAt' => true])
-                                                </span>
-                                                @include('character/partials/itemEdit', ['name' => 'received', 'index' => $i])
-                                            </div>
-                                        </li>
-                                        @if ($errors->has('received.' . $i . '.item_id'))
-                                            <li class="'text-danger font-weight-bold'">
-                                                {{ $errors->first('received.' . $i . '.item_id') }}
-                                            </li>
-                                        @endif
-                                    @endfor
-                                </ul>
-                            </div>
-                        @endif
                     </div>
                 </div>
 

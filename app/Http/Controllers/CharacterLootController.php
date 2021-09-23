@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\{AuditLog, Character, Item};
+use App\{AuditLog, Character, CharacterItem, Item};
 use App\Http\Controllers\AssignLootController;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -42,7 +42,7 @@ class CharacterLootController extends Controller
         }
 
         $query = Character::select('characters.*')->where(['characters.id' => $characterId, 'characters.guild_id' => $guild->id]);
-        $query = Character::addAttendanceQuery($query);
+        $query = Character::addAttendanceQuery($query)->groupBy('characters.id');
         $character = $query->firstOrFail();
 
         if ($character->member_id != $currentMember->id && !$currentMember->hasPermission('loot.characters')) {
@@ -190,7 +190,7 @@ class CharacterLootController extends Controller
 
         $updateValues['public_note'] = request()->input('public_note');
 
-        if ($currentMember->hasPermission('edit.officer-notes') && request()->input('officer_note')) {
+        if ($currentMember->hasPermission('edit.officer-notes')) {
             $updateValues['officer_note'] = request()->input('officer_note');
         }
 
@@ -272,6 +272,7 @@ class CharacterLootController extends Controller
                 1,
             );
         }
+
         return redirect()->route('character.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'characterId' => $character->id, 'nameSlug' => $character->slug, 'b' => 1]);
     }
 
@@ -343,6 +344,7 @@ class CharacterLootController extends Controller
                     }
                     // Received at date changed
                     if (isset($inputItem['new_received_at'])) {
+                        $newValues['is_received'] = 1;
                         $newValues['received_at'] = Carbon::parse($inputItem['new_received_at'])->toDateTimeString();
                     }
                     // Raid changed
@@ -406,7 +408,7 @@ class CharacterLootController extends Controller
             }
 
             if (!isset($inputItem['resolved']) && $inputItem['item_id']) {
-                $isReceived = isset($inputItem['is_received']) ? 1 : 0;
+                $isReceived = isset($inputItem['is_received']) || isset($inputItem['new_received_at']) ? 1 : 0;
                 $isOffspec  = isset($inputItem['is_offspec']) ? 1 : 0;
 
                 $receivedAt = null;
@@ -451,7 +453,7 @@ class CharacterLootController extends Controller
         }
 
         // Delete...
-        DB::table('character_items')->whereIn('id', $toDelete)->delete();
+        CharacterItem::whereIn('id', $toDelete)->delete();
 
         // Update...
         // I'm sure there's some clever way to perform an UPDATE statement with CASE statements... https://stackoverflow.com/questions/3432/multiple-updates-in-mysql
@@ -490,8 +492,8 @@ class CharacterLootController extends Controller
 
             $newValues['updated_at'] = $now;
 
-            DB::table('character_items')
-                ->where('id', $item['pivot_id'])
+            CharacterItem::
+                where('id', $item['pivot_id'])
                 ->update($newValues);
 
             // If we want to log EVERY prio change (this has a cascading effect and can result in hundreds of audits)
@@ -532,7 +534,7 @@ class CharacterLootController extends Controller
         }
 
         // Insert...
-        DB::table('character_items')->insert($toAdd);
+        CharacterItem::insert($toAdd);
 
         // Find any wishlist or prio items that match what was just set as received, and flag them
         // as having been received.
@@ -542,7 +544,8 @@ class CharacterLootController extends Controller
             if (count($itemIds) > 0) {
                 // Find all of the wishlist and prio items associated with this character
                 // that are in the IDs of the items we're adding.
-                DB::table('character_items')->where([
+                CharacterItem::
+                    where([
                         'character_id' => $character->id,
                         'is_received' => 0,
                     ])

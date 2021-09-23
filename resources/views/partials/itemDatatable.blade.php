@@ -1,4 +1,5 @@
-<div class="pr-2 pl-2">
+@include('partials/loadingBars')
+<div class="pr-2 pl-2" style="display:none;" id="itemDatatable">
     <ul class="list-inline mb-0">
         <li class="list-inline-item">
             <label for="raid_group_filter font-weight-light">
@@ -16,6 +17,31 @@
                 @endif
             </select>
         </li>
+        @if ($guild)
+            <li class="list-inline-item">
+                @php
+                    $wishlistNames = $guild->getWishlistNames();
+                @endphp
+                <label for="wishlist_filter" class="font-weight-light">
+                    <span class="text-muted fas fa-fw fa-scroll-old"></span>
+                    {{ __("Wishlist") }}
+                </label>
+                <select id="wishlist_filter" class="form-control dark">
+                    @for ($i = 1; $i <= App\Http\Controllers\CharacterLootController::MAX_WISHLIST_LISTS; $i++)
+                        <option value="{{ $i }}" {{ $guild->current_wishlist_number === $i ? 'selected' : '' }}>
+                            @if ($wishlistNames && $wishlistNames[$i - 1])
+                                {{ $wishlistNames[$i - 1] }}{{ $guild->current_wishlist_number === $i ? '*' : '' }}
+                            @else
+                                {{ $i }}{{ $guild->current_wishlist_number === $i ? '*' : '' }}
+                            @endif
+                        </option>
+                    @endfor
+                    <option value="">
+                        {{ __("All") }}
+                    </option>
+                </select>
+            </li>
+        @endif
 
         <li class="list-inline-item font-weight-light">
             <span class="text-muted fas fa-fw fa-eye-slash"></span>
@@ -58,6 +84,13 @@
             <span class="toggle-column text-link cursor-pointer font-weight-light" data-column="6" href="">
                 <span class="text-muted fal fa-fw fa-comment-alt-lines"></span>
                 {{ __("Prio Notes") }}
+            </span>
+        </li>
+        <li class="list-inline-item">&sdot;</li>
+        <li class="list-inline-item">
+            <span class="js-hide-offspec-items text-link cursor-pointer font-weight-light" data-column="6">
+                <span class="text-muted fal fa-fw fa-trash"></span>
+                {{ __("Hide OS") }}
             </span>
         </li>
     </ul>

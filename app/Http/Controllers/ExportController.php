@@ -194,7 +194,10 @@ class ExportController extends Controller {
                 'outstandingItems' => function ($query) use ($guild, $listNumbers) {
                     return $query
                         ->whereIn('list_number', $listNumbers)
-                        ->orWhere('type', 'prio')
+                        ->orWhere(function($query) {
+                            $query->where('type', 'prio')
+                                ->where('is_received', 0);
+                        })
                         ->select('character_id', 'item_id', 'type', 'order', 'is_offspec');
                 }
             ])
@@ -295,7 +298,7 @@ class ExportController extends Controller {
         $characters = Cache::remember('export:roster:guild:' . $guild->id . ':showOfficerNote:' . $showOfficerNote . ':showPrios:' . $showPrios . ':viewPrioPermission:' . $viewPrioPermission . ':showWishlist:' . $showWishlist . ':attendance:' . $guild->is_attendance_hidden,
             env('EXPORT_CACHE_SECONDS', 120),
             function () use ($guild, $showOfficerNote, $showPrios, $showWishlist, $viewPrioPermission) {
-            return $guild->getCharactersWithItemsAndPermissions($showOfficerNote, $showPrios, $showWishlist, $viewPrioPermission, false)['characters']->makeVisible('officer_note');
+            return $guild->getCharactersWithItemsAndPermissions($showOfficerNote, $showPrios, $showWishlist, $viewPrioPermission, false, false)['characters']->makeVisible('officer_note');
         });
 
         return $this->getExport($characters, 'Character JSON', $fileType);

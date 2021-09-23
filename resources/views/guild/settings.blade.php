@@ -242,35 +242,58 @@
                                     </span>
                                 </label>
                                 @php
+                                    // Support for custom decay days
+                                    $found = false;
+
                                     $rates = [
-                                        31  => '1 month',
-                                        61  => '2 months',
-                                        91  => '3 months',
-                                        122 => '4 months',
-                                        152 => '5 months',
-                                        183 => '6 months',
-                                        213 => '7 months',
-                                        243 => '8 months',
-                                        274 => '9 months',
-                                        304 => '10 months',
-                                        335 => '11 months',
-                                        365 => '1 year',
-                                        456 => '1 ¼ years',
-                                        548 => '1 ½ years',
-                                        639 => '1 ¾ years',
-                                        730 => '2 years',
+                                        1   => __('1 day'),
+                                        3   => __('3 days'),
+                                        7   => __('1 week'),
+                                        14  => __('2 weeks'),
+                                        21  => __('3 weeks'),
+                                        31  => __('1 month'),
+                                        45  => __('1.5 months'),
+                                        61  => __('2 months'),
+                                        75  => __('2.5 months'),
+                                        91  => __('3 months'),
+                                        122 => __('4 months'),
+                                        152 => __('5 months'),
+                                        183 => __('6 months'),
+                                        213 => __('7 months'),
+                                        243 => __('8 months'),
+                                        274 => __('9 months'),
+                                        304 => __('10 months'),
+                                        335 => __('11 months'),
+                                        365 => __('1 year'),
+                                        456 => __('1 ¼ years'),
+                                        548 => __('1 ½ years'),
+                                        639 => __('1 ¾ years'),
+                                        730 => __('2 years'),
                                     ];
+
+                                    $isUnlimited = old('attendance_decay_days') && old('attendance_decay_days') == 36500 || $guild->attendance_decay_days == 36500;
                                 @endphp
                                 <select name="attendance_decay_days" class="form-control dark">
-                                    <option value="" {{ old('attendance_decay_days') && old('attendance_decay_days') == 36500 || $guild->attendance_decay_days == 36500 ? 'selected' : '' }}>
+                                    <option value="" {{ $isUnlimited ? 'selected' : '' }}>
                                         {{ __("No limit") }}
                                     </option>
                                     @foreach ($rates as $key => $label)
+                                        @php
+                                            $isOldValue = (old('attendance_decay_days') && old('attendance_decay_days') == $key) || $guild->attendance_decay_days == $key;
+                                            if ($isOldValue) {
+                                                $found = true;
+                                            }
+                                        @endphp
                                         <option value="{{ $key }}"
-                                            {{ old('attendance_decay_days') && old('attendance_decay_days') == $key || $guild->attendance_decay_days == $key ? 'selected' : '' }}>
+                                            {{ $isOldValue ? 'selected' : '' }}>
                                             {{ $label }}
                                         </option>
                                     @endforeach
+                                    @if (!$found && !$isUnlimited)
+                                        <option value="{{ $guild->attendance_decay_days }}" selected>
+                                            {{ __("custom: :days days", ['days' => $guild->attendance_decay_days]) }}
+                                        </option>
+                                    @endif
                                 </select>
                             </div>
                         </div>
@@ -371,13 +394,37 @@
                             </div>
                             <div class="checkbox">
                                 <label>
-                                    <input type="checkbox" name="is_wishlist_disabled" value="1" class="" autocomplete="off"
-                                        {{ old('is_wishlist_disabled') && old('is_wishlist_disabled') == 1 ? 'checked' : ($guild->is_wishlist_disabled ? 'checked' : '') }}>
-                                        {{ __("Disable wishlists") }}
-                                        <span class="text-muted small">
-                                            {{ __("if your guild doesn't use them") }}
-                                        </span>
+                                    <input type="checkbox" name="use_wishlist_names" value="1" class="" autocomplete="off"
+                                        {{ old('use_wishlist_names') && old('use_wishlist_names') ? 'checked' : ($guild->wishlist_names ? 'checked' : '') }}>
+                                        {{ __("Use custom wishlist names") }}
+                                        <span class="small text-muted">{{ __('max :number characters', ['number' => 30]) }}</span>
                                 </label>
+                            </div>
+                            <div id="wishlistNames" class="mb-1" style="display:none;">
+                                @php
+                                    $wishlistNames = $guild->getWishlistNames();
+                                @endphp
+                                <ol>
+                                    @for ($i = 0; $i < App\Http\Controllers\CharacterLootController::MAX_WISHLIST_LISTS; $i++)
+                                        @php
+                                            $wishlistName = '';
+
+                                            if (old('wishlist_name.' . $i) && old('wishlist_name.' . $i)) {
+                                                $wishlistName = old('wishlist_name.' . $i);
+                                            } else if ($wishlistNames && (array_key_exists($i, $wishlistNames))) {
+                                                $wishlistName = $wishlistNames[$i];
+                                            }
+                                        @endphp
+                                        <li class="mb-3">
+                                            <input name="wishlist_names[{{ $i }}]"
+                                                maxlength="30"
+                                                type="text"
+                                                class="form-control dark slim"
+                                                placeholder="{{ __('Phase :number wishlist', ['number' => $i + 1]) }}"
+                                                value="{{ $wishlistName }}" />
+                                        </li>
+                                    @endfor
+                                </ol>
                             </div>
                             <div class="form-group">
                                 <label for="current_wishlist_number" class="">
@@ -387,13 +434,13 @@
                                         {{ __("(useful for phases)") }}
                                     </small>
                                 </label>
-                                <input name="current_wishlist_number"
-                                    min="1"
-                                    max="{{ App\Http\Controllers\CharacterLootController::MAX_WISHLIST_LISTS }}"
-                                    type="number"
-                                    class="form-control dark"
-                                    placeholder="{{ App\Http\Controllers\CharacterLootController::MAX_WISHLIST_LISTS }}"
-                                    value="{{ old('current_wishlist_number') ? old('current_wishlist_number') : $guild->current_wishlist_number }}" />
+                                <select name="current_wishlist_number" class="form-control dark">
+                                    @for ($i = 1; $i <= App\Http\Controllers\CharacterLootController::MAX_WISHLIST_LISTS; $i++)
+                                        <option value="{{ $i }}" {{ old('current_wishlist_number') && old('current_wishlist_number') == $i || $guild->current_wishlist_number == $i ? 'selected' : '' }}>
+                                            {{ $i }}{{ $guild->current_wishlist_number == $i ? '*' : '' }}
+                                        </option>
+                                    @endfor
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label for="max_wishlist_items" class="">
@@ -407,6 +454,16 @@
                                     class="form-control dark"
                                     placeholder="{{ App\Http\Controllers\CharacterLootController::MAX_WISHLIST_ITEMS }}"
                                     value="{{ old('max_wishlist_items') ? old('max_wishlist_items') : $guild->max_wishlist_items }}" />
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" name="is_wishlist_disabled" value="1" class="" autocomplete="off"
+                                        {{ old('is_wishlist_disabled') && old('is_wishlist_disabled') == 1 ? 'checked' : ($guild->is_wishlist_disabled ? 'checked' : '') }}>
+                                        {{ __("Disable wishlists") }}
+                                        <span class="text-muted small">
+                                            {{ __("if your guild doesn't use them") }}
+                                        </span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -441,6 +498,15 @@
                                         {{ __("By default, delete items from prio lists when they are distributed") }}
                                 </label>
                             </div>
+                            <div class="form-group">
+                                <label for="prio_show_count" class="">
+                                    {{ __("Prio ranks to show") }}
+                                    <span class="text-muted small">
+                                        {{ __("eg. only show top 3 prios to raiders") }}
+                                    </span>
+                                </label>
+                                <input name="prio_show_count" min="1" max="{{ App\Http\Controllers\PrioController::MAX_PRIOS }}" type="number" class="form-control dark" placeholder="{{ App\Http\Controllers\PrioController::MAX_PRIOS }}" value="{{ old('prio_show_count') ? old('prio_show_count') : $guild->prio_show_count }}" />
+                            </div>
                             <div class="checkbox">
                                 <label>
                                     <input type="checkbox" name="is_prio_disabled" value="1" class="" autocomplete="off"
@@ -450,15 +516,6 @@
                                             {{ __("if your guild doesn't use them") }}
                                         </span>
                                 </label>
-                            </div>
-                            <div class="form-group">
-                                <label for="prio_show_count" class="">
-                                    {{ __("Prio ranks to show") }}
-                                    <span class="text-muted small">
-                                        {{ __("eg. only show top 3 prios to raiders") }}
-                                    </span>
-                                </label>
-                                <input name="prio_show_count" min="1" max="{{ App\Http\Controllers\PrioController::MAX_PRIOS }}" type="number" class="form-control dark" placeholder="{{ App\Http\Controllers\PrioController::MAX_PRIOS }}" value="{{ old('prio_show_count') ? old('prio_show_count') : $guild->prio_show_count }}" />
                             </div>
                         </div>
                     </div>
@@ -592,6 +649,48 @@
                                 <div class="small text-muted mb-3">
                                     <ul>
                                         @foreach ($permissions->where('role_note', 'raid_leader') as $permission)
+                                            <li>
+                                                {{ $permission->description }}
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 pt-2 pb-1 mb-3 bg-light rounded">
+                        <div class="row">
+                            <div class="col-12">
+                                <label for="auditor_role_id" class="font-weight-bold">
+                                    <span class="fas fa-fw fa-glasses text-success"></span>
+                                    {{ __("Auditor Role") }}
+                                    <span class="small text-muted font-weight-normal">{{ __("if you have wishlist/prio visibility locked") }}</span>
+                                </label>
+                            </div>
+                            <div class="col-md-6 col-sm-8 col-12">
+                                <div class="form-group">
+                                    <div class="form-group">
+                                        <select name="auditor_role_id" class="form-control dark">
+                                            <option value="" selected>
+                                                —
+                                            </option>
+
+                                            @foreach ($guild->roles as $role)
+                                                <option value="{{ $role->discord_id }}"
+                                                    style="color:{{ $role->getColor() }};"
+                                                    {{ old('auditor_role_id') && old('auditor_role_id') == $role->discord_id ? 'selected' : ($guild->auditor_role_id == $role->discord_id ? 'selected' : '') }}>
+                                                    {{ $role->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="small text-muted mb-3">
+                                    <ul>
+                                        @foreach ($permissions->where('role_note', 'auditor') as $permission)
                                             <li>
                                                 {{ $permission->description }}
                                             </li>

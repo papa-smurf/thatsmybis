@@ -8,35 +8,33 @@
             <div class="row mb-3">
                 <div class="col-12 pt-2 bg-lightest rounded">
                     @php
+                        $benchedCount = $member->charactersWithAttendance->sum(function ($character) {
+                            return $character->benched_count;
+                        });
                         $raidCount = $characters->sum(function ($character) {
                             return $character->raid_count;
                         });
-                        $attendancePercentage = $characters->where('raid_count', '>', 0)->sum(function ($character) {
-                            return $character->attendance_percentage;
+                        $raidsAttended = $characters->where('raid_count', '>', 0)->sum(function ($character) {
+                            return $character->raid_count * $character->attendance_percentage;
                         });
-                        $attendancePercentage = $attendancePercentage ? ($attendancePercentage / $characters->where('raid_count', '>', 0)->count()) : $attendancePercentage;
+                        $attendancePercentage = $raidCount > 0 ? ($raidsAttended / $raidCount) : 100;
                     @endphp
                     @include('member/partials/header', [
-                        'discordUsername' => $member->user->discord_username,
-                        'headerSize' => 1,
-                        'showEdit' => $showEdit,
-                        'titlePrefix' => null,
-                        'showLogs' => true,
+                        'discordUsername'      => $member->user->discord_username,
+                        'benchedCount'         => $benchedCount,
+                        'headerSize'           => 1,
+                        'showEdit'             => $showEdit,
+                        'titlePrefix'          => null,
+                        'showLogs'             => true,
                         'attendancePercentage' => $attendancePercentage,
-                        'raidCount' => $raidCount,
+                        'raidCount'            => $raidCount,
                     ])
                 </div>
             </div>
 
             <div class="row mb-3 pt-3 bg-light rounded">
-                <div class="col-12 mb-2">
-                    <span class="font-weight-bold">
-                        <span class="fas fa-fw fa-helmet-battle text-dk"></span>
-                        {{ __("Raid History") }}
-                    </span>
-                </div>
-
                 <div class="col-12 pb-3">
+                    <label class="sr-only">{{ __("Raid History") }}</label>
                     @if ($member->characters->count())
                         @php
                             $raids = collect();
@@ -68,10 +66,21 @@
                     <ol class="striped no-bullet no-indent">
                         @if ($showEdit)
                             <li class="pt-3 pl-3 pb-3 pr-3 rounded">
-                                <a href="{{ route('character.showCreate', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'member_id' => $member->id]) }}" class="btn btn-success font-weight-medium">
-                                    <span class="fas fa-plus"></span>
-                                    {{ __("Create character") }}
-                                </a>
+                                <ul class="list-inline">
+                                    <li class="list-inline-item">
+                                        <a href="{{ route('character.showCreate', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'member_id' => $member->id]) }}" class="btn btn-success font-weight-medium">
+                                            <span class="fas fa-plus"></span>
+                                            {{ __("Create character") }}
+                                        </a>
+                                    </li>
+                                    @if ($unassignedCharacterCount > 0)
+                                        <li class="list-inline-item">
+                                            <a href="{{ route('guild.members.list', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}" class="btn btn-link">
+                                                {{ __("View Unclaimed Characters") }} <span class="small text-muted">({{ $unassignedCharacterCount }})</span>
+                                            </a>
+                                        </li>
+                                    @endif
+                                </ul>
                             </li>
                         @endif
                         @foreach ($characters->where('inactive_at', null) as $character)

@@ -3,6 +3,7 @@
 namespace App;
 
 use App\{
+    BaseModel,
     Character,
     Content,
     Expansion,
@@ -13,9 +14,8 @@ use App\{
     Role,
     User,
 };
-use Illuminate\Database\Eloquent\Model;
 
-class Guild extends Model
+class Guild extends BaseModel
 {
     /**
      * The attributes that are mass assignable.
@@ -32,6 +32,7 @@ class Guild extends Model
         'gm_role_id',
         'officer_role_id',
         'raid_leader_role_id',
+        'auditor_role_id',
         'class_leader_role_id',
         'member_role_ids',
         'message',
@@ -43,7 +44,8 @@ class Guild extends Model
         'is_received_locked',
         'is_wishlist_private',
         'is_wishlist_locked',
-        'wishlist_locked_exceptions',
+        'wishlist_locked_exceptions', // A list of exceptions, delimited by commas.
+        'wishlist_names', // A list of names, delimited by the bar character "|".
         'is_prio_autopurged',
         'is_wishlist_autopurged',
         'is_wishlist_disabled',
@@ -87,7 +89,16 @@ class Guild extends Model
 
     // Includes hidden and removed characters
     public function allCharacters() {
-        return $this->hasMany(Character::class)->orderBy('name');
+        return $this
+            ->hasMany(Character::class)
+            ->select([
+                'characters.*'
+            ])
+            ->orderBy('characters.name');
+    }
+
+    public function allCharactersWithAttendance() {
+        return Character::addAttendanceQuery($this->allCharacters())->groupBy('characters.id');
     }
 
     // Includes banned and inactive members
@@ -101,7 +112,8 @@ class Guild extends Model
 
     // Excludes hidden and removed characters
     public function characters() {
-        return $this->hasMany(Character::class)
+        return $this
+            ->hasMany(Character::class)
             ->select([
                 'characters.*'
             ])
@@ -112,7 +124,7 @@ class Guild extends Model
     // Gets characters and their attendance stats
     // Excludes hidden and removed characters
     public function charactersWithAttendance() {
-        return Character::addAttendanceQuery($this->characters());
+        return Character::addAttendanceQuery($this->characters())->groupBy('characters.id');
     }
 
     public function content() {
@@ -171,6 +183,10 @@ class Guild extends Model
         return explode(',', $this->wishlist_locked_exceptions);
     }
 
+    public function getWishlistNames() {
+        return $this->wishlist_names ? explode('|', $this->wishlist_names) : null;
+    }
+
     /**
      * SHORT AND SIMPLE NAME IS SHORT AND SIMPLE.
      * Returns all of the characters and all the stuff associated with them.
@@ -183,7 +199,7 @@ class Guild extends Model
      *
      * @return array
      */
-    public function getCharactersWithItemsAndPermissions($showOfficerNote, $showPrios, $showWishlist, $viewPrioPermission, $showInactive) {
+    public function getCharactersWithItemsAndPermissions($showOfficerNote, $showPrios, $showWishlist, $viewPrioPermission, $showInactive, $allWishlists) {
         $characterFields = [
             'characters.id',
             'characters.member_id',
@@ -193,7 +209,9 @@ class Guild extends Model
             'characters.level',
             'characters.race',
             'characters.class',
+            'characters.archetype',
             'characters.spec',
+            'characters.spec_label',
             'characters.profession_1',
             'characters.profession_2',
             'characters.rank',
@@ -230,7 +248,7 @@ class Guild extends Model
             ->where('characters.guild_id', $this->id)
             ->orderBy('characters.name')
             ->with([
-                'received',
+                'received', // TODO: Optimize (is slow)
                 'secondaryRaidGroups' => function ($query) {
                     return $query
                         ->select([
@@ -244,7 +262,7 @@ class Guild extends Model
                     },
                 ]);
 
-        $query = Character::addAttendanceQuery($query);
+        $query = Character::addAttendanceQuery($query)->groupBy('characters.id');
 
         if (!$showInactive) {
             $query = $query->whereNull('characters.inactive_at');
@@ -252,7 +270,7 @@ class Guild extends Model
 
         if ($showPrios) {
             if ($this->prio_show_count && !$viewPrioPermission) {
-                $query = $query->with(['prios' => function ($query) {
+                $query = $query->with(['prios' => function ($query) { // TODO: Optimize (is slow)
                     return $query->where([
                         ['character_items.order', '<=', $this->prio_show_count],
                     ]);
@@ -263,7 +281,12 @@ class Guild extends Model
         }
 
         if ($showWishlist) {
-            $query = $query->with('wishlist');
+            if ($allWishlists) {
+                // NOTE that this will output the relation 'allWishlists' and NOT 'wishlist'
+                $query = $query->with('allWishlists'); // TODO: Optimize (is slow)
+            } else {
+                $query = $query->with('wishlist'); // TODO: Optimize (is slow)
+            }
         }
 
         $characters = $query->get();

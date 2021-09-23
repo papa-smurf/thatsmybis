@@ -319,32 +319,33 @@ class GuildController extends Controller
         $guild->load('roles');
 
         $validationRules =  [
-            'name'                      => 'string|max:36',
-            'disabled_at'               => 'nullable|boolean',
-            'is_prio_private'           => 'nullable|boolean',
-            'is_prio_disabled'          => 'nullable|boolean',
-            'is_received_locked'        => 'nullable|boolean',
-            'is_wishlist_private'       => 'nullable|boolean',
-            'is_wishlist_locked'        => 'nullable|boolean',
+            'name'                         => 'string|max:36',
+            'disabled_at'                  => 'nullable|boolean',
+            'is_prio_private'              => 'nullable|boolean',
+            'is_prio_disabled'             => 'nullable|boolean',
+            'is_received_locked'           => 'nullable|boolean',
+            'is_wishlist_private'          => 'nullable|boolean',
+            'is_wishlist_locked'           => 'nullable|boolean',
             'wishlist_locked_exceptions.*' => 'nullable|boolean',
-            'is_wishlist_disabled'      => 'nullable|boolean',
-            'is_prio_autopurged'        => 'nullable|boolean',
-            'is_wishlist_autopurged'    => 'nullable|boolean',
-            'max_wishlist_items'        => 'nullable|integer|min:1|max:' . CharacterLootController::MAX_WISHLIST_ITEMS,
-            'current_wishlist_number'   => 'nullable|integer|min:1|max:' . CharacterLootController::MAX_WISHLIST_LISTS,
-            'prio_show_count'           => 'nullable|integer|min:1|max:' . PrioController::MAX_PRIOS,
-            'do_sort_items_by_instance' => 'nullable|boolean',
-            'is_raid_group_locked'      => 'nullable|boolean',
-            'is_attendance_hidden'      => 'nullable|boolean',
-            'attendance_decay_days'     => 'nullable|integer|min:1|max:730',
-            'tier_mode'                 => 'nullable|string|in:s,num',
-            'calendar_link'             => 'nullable|string|max:200',
-            'message'                   => 'nullable|string|max:500',
-            'show_message'              => 'nullable|boolean',
-            'gm_role_id'                => 'nullable|integer|exists:roles,discord_id',
-            'officer_role_id'           => 'nullable|integer|exists:roles,discord_id',
-            'raid_leader_role_id'       => 'nullable|integer|exists:roles,discord_id',
-            'member_roles.*'            => 'nullable|integer|exists:roles,discord_id',
+            'wishlist_names.*'             => 'nullable|string|max:30',
+            'is_wishlist_disabled'         => 'nullable|boolean',
+            'is_prio_autopurged'           => 'nullable|boolean',
+            'is_wishlist_autopurged'       => 'nullable|boolean',
+            'max_wishlist_items'           => 'nullable|integer|min:1|max:' . CharacterLootController::MAX_WISHLIST_ITEMS,
+            'current_wishlist_number'      => 'nullable|integer|min:1|max:' . CharacterLootController::MAX_WISHLIST_LISTS,
+            'prio_show_count'              => 'nullable|integer|min:1|max:' . PrioController::MAX_PRIOS,
+            'do_sort_items_by_instance'    => 'nullable|boolean',
+            'is_raid_group_locked'         => 'nullable|boolean',
+            'is_attendance_hidden'         => 'nullable|boolean',
+            'attendance_decay_days'        => 'nullable|integer|min:1|max:99999',
+            'tier_mode'                    => 'nullable|string|in:s,num',
+            'calendar_link'                => 'nullable|string|max:200',
+            'message'                      => 'nullable|string|max:500',
+            'show_message'                 => 'nullable|boolean',
+            'gm_role_id'                   => 'nullable|integer|exists:roles,discord_id',
+            'officer_role_id'              => 'nullable|integer|exists:roles,discord_id',
+            'raid_leader_role_id'          => 'nullable|integer|exists:roles,discord_id',
+            'member_roles.*'               => 'nullable|integer|exists:roles,discord_id',
         ];
 
         $this->validate(request(), $validationRules);
@@ -359,6 +360,11 @@ class GuildController extends Controller
         $updateValues['wishlist_locked_exceptions'] =
             $updateValues['is_wishlist_locked'] && request()->input('wishlist_locked_exceptions')
             ? implode(",", array_keys(request()->input('wishlist_locked_exceptions')))
+            : null;
+        $updateValues['wishlist_names'] =
+            request()->input('use_wishlist_names') && request()->input('wishlist_names') ?
+            // List delimited by bars "|". First, remove any existing bars.
+            implode("|", array_values(str_replace('|', '', request()->input('wishlist_names'))))
             : null;
         $updateValues['is_wishlist_disabled']      = request()->input('is_wishlist_disabled') == 1 ? 1 : 0;
         $updateValues['is_prio_autopurged']        = request()->input('is_prio_autopurged') == 1 ? 1 : 0;
@@ -375,6 +381,7 @@ class GuildController extends Controller
         $updateValues['calendar_link']             = request()->input('calendar_link');
         $updateValues['member_role_ids']           = implode(",", array_filter(request()->input('member_roles')));
 
+        // Update the permissions attached to each role in the guild
         $updateValues = $this->flushRoles($guild, $updateValues);
 
         $auditMessage = '';
@@ -408,6 +415,12 @@ class GuildController extends Controller
             $auditMessage .= ' (unlocked wishlists changed to ' . str_replace(',', ', ', $updateValues['wishlist_locked_exceptions']) . ')';
         }
 
+        if (($updateValues['wishlist_names'] && $updateValues['wishlist_names'] != $guild->wishlist_names)) {
+            $auditMessage .= ' (wishlist names changed)';
+        } else if (!request()->input('use_wishlist_names') && $guild->wishlist_names) {
+            $auditMessage .= ' (removed wishlist names)';
+        }
+
         if (array_key_exists('gm_role_id', $updateValues) && $updateValues['gm_role_id'] != $guild->gm_role_id) {
             $role = $guild->roles->where('discord_id', $updateValues['gm_role_id'])->first();
             $auditMessage .= ' (GM role changed to ' . ($role ? $role->name : 'none') . ')';
@@ -419,6 +432,10 @@ class GuildController extends Controller
         if (array_key_exists('raid_leader_role_id', $updateValues) && $updateValues['raid_leader_role_id'] != $guild->raid_leader_role_id) {
             $role = $guild->roles->where('discord_id', $updateValues['raid_leader_role_id'])->first();
             $auditMessage .= ' (Raid Leader role changed to ' . ($role ? $role->name : 'none') . ')';
+        }
+        if (array_key_exists('auditor_role_id', $updateValues) && $updateValues['auditor_role_id'] != $guild->auditor_role_id) {
+            $role = $guild->roles->where('discord_id', $updateValues['auditor_role_id'])->first();
+            $auditMessage .= ' (Auditor role changed to ' . ($role ? $role->name : 'none') . ')';
         }
 
         if ($updateValues['member_role_ids'] != $guild->member_role_ids) {
@@ -562,6 +579,12 @@ class GuildController extends Controller
                 $role->permissions()->detach();
             }
         }
+        if ($guild->auditor_role_id) {
+            $role = $guild->roles->where('discord_id', $guild->auditor_role_id)->first();
+            if ($role) {
+                $role->permissions()->detach();
+            }
+        }
 
         if (request()->input('gm_role_id')) {
             $role = $guild->roles->where('discord_id', request()->input('gm_role_id'))->first();
@@ -595,6 +618,17 @@ class GuildController extends Controller
             }
         } else {
             $updateValues['raid_leader_role_id'] = null;
+        }
+        // Copy of the role code seen above
+        if (request()->input('auditor_role_id')) {
+            $role = $guild->roles->where('discord_id', request()->input('auditor_role_id'))->first();
+            if ($role) {
+                $rolePermissions = $permissions->whereIn('role_note', [Permission::AUDITOR]);
+                $role->permissions()->syncWithoutDetaching($rolePermissions->keyBy('id')->keys()->toArray());
+                $updateValues['auditor_role_id'] = request()->input('auditor_role_id');
+            }
+        } else {
+            $updateValues['auditor_role_id'] = null;
         }
 
         return $updateValues;

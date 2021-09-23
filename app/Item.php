@@ -2,11 +2,10 @@
 
 namespace App;
 
-use App\{Character, Expansion, Guild, ItemSource};
-use Illuminate\Database\Eloquent\Model;
+use App\{BaseModel, Character, Expansion, Guild, ItemSource};
 use Illuminate\Support\Facades\DB;
 
-class Item extends Model
+class Item extends BaseModel
 {
     protected $primaryKey = 'item_id';
 
@@ -40,6 +39,14 @@ class Item extends Model
         'inventory_type',
         'allowable_class',
         'item_level',
+        'name_cn',
+        'name_de',
+        'name_es',
+        'name_fr',
+        'name_it',
+        'name_ko',
+        'name_pt',
+        'name_ru',
         'required_level',
         'set_id',
     ];
@@ -76,7 +83,7 @@ class Item extends Model
 
     public function charactersWithAttendance() {
         $query = $this->characters();
-        return Character::addAttendanceQuery($query);
+        return Character::addAttendanceQuery($query)->groupBy('characters.id');
     }
 
     public function expansion() {
@@ -135,7 +142,7 @@ class Item extends Model
 
     public function priodCharactersWithAttendance() {
         $query = $this->priodCharacters();
-        return Character::addAttendanceQuery($query);
+        return Character::addAttendanceQuery($query)->groupBy('characters.id');
     }
 
     public function receivedCharacters() {
@@ -172,7 +179,7 @@ class Item extends Model
 
     public function receivedCharactersWithAttendance() {
         $query = $this->receivedCharacters();
-        return Character::addAttendanceQuery($query);
+        return Character::addAttendanceQuery($query)->groupBy('characters.id');
     }
 
     public function receivedAndRecipeCharacters() {
@@ -210,7 +217,7 @@ class Item extends Model
 
     public function receivedAndRecipeCharactersWithAttendance() {
         $query = $this->receivedAndRecipeCharacters();
-        return Character::addAttendanceQuery($query);
+        return Character::addAttendanceQuery($query)->groupBy('characters.id');
     }
 
     public function wishlistCharacters() {
@@ -233,7 +240,7 @@ class Item extends Model
             })
             ->where([
                 'character_items.type'        => self::TYPE_WISHLIST,
-                'character_items.list_number' => DB::raw('wishlist_guilds.current_wishlist_number'),
+                // 'character_items.list_number' => DB::raw('wishlist_guilds.current_wishlist_number'),
             ])
             ->whereNull('characters.inactive_at')
             ->withTimeStamps()

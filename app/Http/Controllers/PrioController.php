@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\{AuditLog, Character, Guild, Instance, Item, RaidGroup};
+use App\{AuditLog, Character, CharacterItem, Guild, Instance, Item, RaidGroup};
 use App\Http\Controllers\ItemController;
 use Auth;
 use Illuminate\Http\Request;
@@ -36,9 +36,9 @@ class PrioController extends Controller
 
         if ($guild->is_prio_disabled || !$currentMember->hasPermission('edit.prios')) {
             if ($guild->is_prio_disabled) {
-                request()->session()->flash('status', 'Prios are disabled by the man.');
+                request()->session()->flash('status', __('Prios are disabled by guild leadership.'));
             } else {
-                request()->session()->flash('status', 'You don\'t have permissions to view that page.');
+                request()->session()->flash('status', __("You don't have permissions to view that page."));
             }
             return redirect()->route('member.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'memberId' => $currentMember->id, 'usernameSlug' => $currentMember->slug]);
         }
@@ -69,9 +69,9 @@ class PrioController extends Controller
 
         if ($guild->is_prio_disabled || !$currentMember->hasPermission('edit.prios')) {
             if ($guild->is_prio_disabled) {
-                request()->session()->flash('status', 'Prios are disabled by the man.');
+                request()->session()->flash('status', __('Prios are disabled by guild leadership.'));
             } else {
-                request()->session()->flash('status', 'You don\'t have permissions to view that page.');
+                request()->session()->flash('status', __("You don't have permissions to view that page."));
             }
             return redirect()->route('member.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'memberId' => $currentMember->id, 'usernameSlug' => $currentMember->slug]);
         }
@@ -150,11 +150,12 @@ class PrioController extends Controller
                             $join->on('character_raid_groups.character_id', 'characters.id');
                         })
                         ->where([
-                            'characters.guild_id'      => $guild->id,
-                            'is_received'              => 0,
+                            'characters.guild_id' => $guild->id,
+                            'is_received'         => 0,
+                            'list_number'         => DB::raw('wishlist_guilds.current_wishlist_number'),
                         ])
                         ->whereRaw("(characters.raid_group_id = {$raidGroup->id} OR character_raid_groups.raid_group_id = {$raidGroup->id})")
-                        ->groupBy(['character_items.character_id', 'character_items.item_id'])
+                        ->groupBy(['character_items.character_id', 'character_items.item_id', 'character_items.list_number'])
                         ->orderBy('character_items.order');
                 },
                 'childItems' => function ($query) use ($guild, $raidGroup) {
@@ -165,12 +166,13 @@ class PrioController extends Controller
                                     $join->on('character_raid_groups.character_id', 'characters.id');
                                 })
                                 ->where([
-                                    'characters.guild_id'      => $guild->id,
-                                    'is_received'              => 0,
+                                    'characters.guild_id' => $guild->id,
+                                    'is_received'         => 0,
+                                    'list_number'         => DB::raw('wishlist_guilds.current_wishlist_number'),
                                 ])
                                 ->whereRaw("(characters.raid_group_id = {$raidGroup->id} OR character_raid_groups.raid_group_id = {$raidGroup->id})")
                                 ->whereNull('characters.inactive_at')
-                                ->groupBy(['character_items.character_id', 'character_items.item_id'])
+                                ->groupBy(['character_items.character_id', 'character_items.item_id', 'character_items.list_number'])
                                 ->orderBy('character_items.order');
                         },
                     ]);
@@ -205,9 +207,9 @@ class PrioController extends Controller
 
         if ($guild->is_prio_disabled || !$currentMember->hasPermission('edit.prios')) {
             if ($guild->is_prio_disabled) {
-                request()->session()->flash('status', 'Prios are disabled by the man.');
+                request()->session()->flash('status', __('Prios are disabled by guild leadership.'));
             } else {
-                request()->session()->flash('status', 'You don\'t have permissions to view that page.');
+                request()->session()->flash('status', __("You don't have permissions to view that page."));
             }
             return redirect()->route('member.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'memberId' => $currentMember->id, 'usernameSlug' => $currentMember->slug]);
         }
@@ -298,7 +300,7 @@ class PrioController extends Controller
         $item = $items->first();
 
         if (!$item) {
-            request()->session()->flash('status', 'Item not found. Can\'t set prios on items that don\'t drop from a boss or aren\'t in our loot tables, including token rewards.');
+            request()->session()->flash('status', __("Item not found. Can't set prios on items that don't drop from a boss or aren't in our loot tables, including token rewards."));
             return redirect()->route('member.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'memberId' => $currentMember->id, 'usernameSlug' => $currentMember->slug]);
         }
 
@@ -319,15 +321,19 @@ class PrioController extends Controller
         ]);
     }
 
+
+    /**
+     * Submit the mass input page for prios, for a given dungeon and raid group.
+     */
     public function submitAssignPrios($guildId, $guildSlug) {
         $guild         = request()->get('guild');
         $currentMember = request()->get('currentMember');
 
         if ($guild->is_prio_disabled || !$currentMember->hasPermission('edit.prios')) {
             if ($guild->is_prio_disabled) {
-                request()->session()->flash('status', 'Prios are disabled by the man.');
+                request()->session()->flash('status', __('Prios are disabled by guild leadership.'));
             } else {
-                request()->session()->flash('status', 'You don\'t have permissions to view that page.');
+                request()->session()->flash('status', __("You don't have permissions to view that page."));
             }
             return redirect()->route('member.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'memberId' => $currentMember->id, 'usernameSlug' => $currentMember->slug]);
         }
@@ -383,7 +389,8 @@ class PrioController extends Controller
 
         $modifiedCount = $this->syncPrios($itemsWithExistingPrios, request()->input('items'), $currentMember, $guild->characters, $raidGroup);
 
-        request()->session()->flash('status', 'Successfully updated prios for ' . $modifiedCount . ' items in ' . $raidGroup->name . '.');
+        request()->session()->flash('status', __('Successfully updated prios for :count items in :raidGroup.', ['count' => $modifiedCount, 'raidGroup' => $raidGroup->name]));
+
         return redirect()->route('guild.item.list', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'instanceSlug' => $instance->slug, 'b' => 1]);
     }
 
@@ -398,9 +405,9 @@ class PrioController extends Controller
 
         if ($guild->is_prio_disabled || !$currentMember->hasPermission('edit.prios')) {
             if ($guild->is_prio_disabled) {
-                request()->session()->flash('status', 'Prios are disabled by the man.');
+                request()->session()->flash('status', __('Prios are disabled by guild leadership.'));
             } else {
-                request()->session()->flash('status', 'You don\'t have permissions to view that page.');
+                request()->session()->flash('status', __("You don't have permissions to view that page."));
             }
             return redirect()->route('member.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'memberId' => $currentMember->id, 'usernameSlug' => $currentMember->slug]);
         }
@@ -445,7 +452,12 @@ class PrioController extends Controller
 
         $modifiedCount = $this->syncPrios($itemsWithExistingPrios, request()->input('items'), $currentMember, $guild->characters, $raidGroup);
 
-        request()->session()->flash('status', ($modifiedCount ? 'Successfully updated prios for ' : 'No changes made to prios for ') . $itemsWithExistingPrios->first()->name . ' in ' . $raidGroup->name . '.');
+        if ($modifiedCount) {
+            request()->session()->flash('status', __('Successfully updated prios for :itemName in :raidGroup.', ['itemName' => $itemsWithExistingPrios->first()->name, 'raidGroup' => $raidGroup->name]));
+        } else {
+            request()->session()->flash('status', __('No changes made to prios for :itemName in :raidGroup.', ['itemName' => $itemsWithExistingPrios->first()->name, 'raidGroup' => $raidGroup->name]));
+        }
+
         return redirect()->route('guild.item.show', [
             'guildId'   => $guild->id,
             'guildSlug' => $guild->slug,
@@ -547,6 +559,20 @@ class PrioController extends Controller
                                 }
 
                                 if ($changed) {
+                                    // Since we are using UPSERT, these fields MUST be present. Populate them if they are missing.
+                                    if (!array_key_exists('received_at', $newValues)) {
+                                        $newValues['received_at'] = $existingPrio->pivot->received_at;
+                                    }
+                                    if (!array_key_exists('order', $newValues)) {
+                                        $newValues['order'] = $existingPrio->pivot->order;
+                                    }
+                                    if (!array_key_exists('is_received', $newValues)) {
+                                        $newValues['is_received'] = $existingPrio->pivot->is_received;
+                                    }
+                                    if (!array_key_exists('is_offspec', $newValues)) {
+                                        $newValues['is_offspec'] = $existingPrio->pivot->is_offspec;
+                                    }
+
                                     $toUpdate[] = $newValues;
                                     $toUpdateCount++;
                                 }
@@ -642,28 +668,23 @@ class PrioController extends Controller
         }
 
         // Delete...
-        DB::table('character_items')->whereIn('id', $toDrop)->delete();
+        CharacterItem::whereIn('id', $toDrop)->delete();
 
         // Update...
-        // I'm sure there's some clever way to perform an UPDATE statement with CASE statements... https://stackoverflow.com/questions/3432/multiple-updates-in-mysql
-        // Don't have time to implement that.
-        foreach ($toUpdate as $item) {
-            $item ['updated_at'] = $now;
-            DB::table('character_items')
-                ->where('id', $item['id'])
-                ->update($item);
-
-            // If we want to log EVERY prio change (this has a cascading effect when orders change and can result in thousands of audits)
-            // $audits[] = [
-            //     'description'  => $currentMember->username . ' updated prio order on a character (prio set to ' . $item['order'] . ')',
-            //     'member_id'    => $currentMember->id,
-            //     'guild_id'     => $currentMember->guild_id,
-            //     'item_id'      => $item['id'],
-            // ];
-        }
+        CharacterItem::
+            upsert(
+                $toUpdate, // New data, includes `id` column
+                ['id'], // Identifying column
+                [ // Fields to be updated
+                    'order',
+                    'is_offspec',
+                    'is_received',
+                    'received_at',
+                ]
+            );
 
         // Insert...
-        DB::table('character_items')->insert($toAdd);
+        CharacterItem::insert($toAdd);
 
         AuditLog::insert($audits);
 

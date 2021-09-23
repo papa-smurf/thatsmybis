@@ -2,12 +2,13 @@
 
 namespace App;
 
-use Illuminate\Database\Eloquent\Model;
+use App\BaseModel;
+
 /**
  * I copied over the Permissions class from the kodeine\laravel-acl library because I wanted to
  * extend it but keep the same name. So screw it I'll just copy it. Maybe there's a better way.
  */
-class Permission extends Model
+class Permission extends BaseModel
 {
     /**
      * The attributes that are fillable via mass assignment.
@@ -25,6 +26,7 @@ class Permission extends Model
     const GUILD_MASTER = 'guild_master';
     const OFFICER      = 'officer';
     const RAID_LEADER  = 'raid_leader';
+    const AUDITOR      = 'auditor';
 
     /**
      * The database table used by the model.
