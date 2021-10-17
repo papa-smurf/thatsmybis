@@ -6,8 +6,7 @@ use App\{AuditLog, Character, CharacterItem, Guild, Instance, Item, RaidGroup};
 use App\Http\Controllers\ItemController;
 use Auth;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\{DB, Validator};
 use Illuminate\Validation\Rule;
 
 class PrioController extends Controller
@@ -113,7 +112,7 @@ class PrioController extends Controller
                 ['item_sources.instance_id', $instance->id],
                 ['items.expansion_id', $guild->expansion_id],
             ])
-            ->whereNull('items.parent_id')
+            // ->whereNull('items.parent_id')
             // Without this, we'd get the same item listed multiple times from multiple sources in some cases
             // This is problematic because the notes entered may differ, but we can only take one.
             ->groupBy('items.item_id')
@@ -144,7 +143,7 @@ class PrioController extends Controller
             ]);
         } else {
             $query = $query->with([
-                ($guild->is_attendance_hidden ? 'wishlistCharacters' : 'wishlistCharactersWithAttendance') => function ($query) use($guild, $raidGroup) {
+                'wishlistCharacters' => function ($query) use($guild, $raidGroup) {
                     return $query
                         ->leftJoin('character_raid_groups', function ($join) {
                             $join->on('character_raid_groups.character_id', 'characters.id');
@@ -152,15 +151,15 @@ class PrioController extends Controller
                         ->where([
                             'characters.guild_id' => $guild->id,
                             'is_received'         => 0,
-                            'list_number'         => DB::raw('wishlist_guilds.current_wishlist_number'),
+                            'list_number'         => DB::raw('`wishlist_guilds`.`current_wishlist_number`'),
                         ])
-                        ->whereRaw("(characters.raid_group_id = {$raidGroup->id} OR character_raid_groups.raid_group_id = {$raidGroup->id})")
+                        ->whereRaw("(`characters`.`raid_group_id` = {$raidGroup->id} OR `character_raid_groups`.`raid_group_id` = {$raidGroup->id})")
                         ->groupBy(['character_items.character_id', 'character_items.item_id', 'character_items.list_number'])
                         ->orderBy('character_items.order');
                 },
                 'childItems' => function ($query) use ($guild, $raidGroup) {
                     return $query->with([
-                        ($guild->is_attendance_hidden ? 'wishlistCharacters' : 'wishlistCharactersWithAttendance') => function ($query) use($guild, $raidGroup) {
+                        'wishlistCharacters' => function ($query) use($guild, $raidGroup) {
                             return $query
                                 ->leftJoin('character_raid_groups', function ($join) {
                                     $join->on('character_raid_groups.character_id', 'characters.id');
@@ -168,9 +167,9 @@ class PrioController extends Controller
                                 ->where([
                                     'characters.guild_id' => $guild->id,
                                     'is_received'         => 0,
-                                    'list_number'         => DB::raw('wishlist_guilds.current_wishlist_number'),
+                                    'list_number'         => DB::raw('`wishlist_guilds`.`current_wishlist_number`'),
                                 ])
-                                ->whereRaw("(characters.raid_group_id = {$raidGroup->id} OR character_raid_groups.raid_group_id = {$raidGroup->id})")
+                                ->whereRaw("(`characters`.`raid_group_id` = {$raidGroup->id} OR `character_raid_groups`.`raid_group_id` = {$raidGroup->id})")
                                 ->whereNull('characters.inactive_at')
                                 ->groupBy(['character_items.character_id', 'character_items.item_id', 'character_items.list_number'])
                                 ->orderBy('character_items.order');
@@ -184,6 +183,15 @@ class PrioController extends Controller
 
         if (!$guild->is_wishlist_disabled) {
             $items = ItemController::mergeTokenWishlists($items, $guild);
+
+            // For optimization, fetch characters with their attendance here and then merge them into
+            // the existing characters for prios and wishlists
+            if (!$guild->is_attendance_hidden) {
+                $charactersWithAttendance = Guild::getAllCharactersWithAttendanceCached($guild);
+                foreach ($items as $item) {
+                    $item->wishlistCharacters = Character::mergeAttendance($item->wishlistCharacters, $charactersWithAttendance);
+                }
+            }
         }
 
         return view('guild.prios.assignPrios', [
@@ -242,7 +250,7 @@ class PrioController extends Controller
                 ['items.item_id', $itemId],
                 ['items.expansion_id', $guild->expansion_id],
             ])
-            ->whereNull('items.parent_id')
+            // ->whereNull('items.parent_id')
             ->groupBy('items.item_id')
             ->with([
                 'priodCharacters' => function ($query) use ($raidGroup) {
@@ -261,7 +269,7 @@ class PrioController extends Controller
                         ->whereRaw("(characters.raid_group_id = {$raidGroup->id} OR character_raid_groups.raid_group_id = {$raidGroup->id})")
                         ->groupBy(['character_items.character_id', 'character_items.item_id']);
                 },
-                ($guild->is_attendance_hidden ? 'wishlistCharacters' : 'wishlistCharactersWithAttendance') => function ($query) use($guild, $raidGroup) {
+                'wishlistCharacters' => function ($query) use($guild, $raidGroup) {
                     return $query
                         ->leftJoin('character_raid_groups', function ($join) {
                             $join->on('character_raid_groups.character_id', 'characters.id');
@@ -275,7 +283,7 @@ class PrioController extends Controller
                 },
                 'childItems' => function ($query) use ($guild, $raidGroup) {
                     return $query->with([
-                        ($guild->is_attendance_hidden ? 'wishlistCharacters' : 'wishlistCharactersWithAttendance') => function ($query) use($guild, $raidGroup) {
+                        'wishlistCharacters' => function ($query) use($guild, $raidGroup) {
                             return $query
                                 ->leftJoin('character_raid_groups', function ($join) {
                                     $join->on('character_raid_groups.character_id', 'characters.id');
@@ -305,10 +313,16 @@ class PrioController extends Controller
         }
 
         $wishlistCharacters = null;
-        if ($guild->is_attendance_hidden && $item->relationLoaded('wishlistCharacters')) {
+
+        if (!$guild->is_wishlist_disabled) {
             $wishlistCharacters = $item->wishlistCharacters;
-        } else if ($item->relationLoaded('wishlistCharactersWithAttendance')) {
-            $wishlistCharacters = $item->wishlistCharactersWithAttendance;
+
+            // For optimization, fetch characters with their attendance here and then merge them into
+            // the existing characters for prios and wishlists
+            if (!$guild->is_attendance_hidden) {
+                $charactersWithAttendance = Guild::getAllCharactersWithAttendanceCached($guild);
+                $wishlistCharacters = Character::mergeAttendance($wishlistCharacters, $charactersWithAttendance);
+            }
         }
 
         return view('guild.prios.singleInput', [

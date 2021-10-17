@@ -75,6 +75,13 @@ function createTable(lastSource) {
     itemTable = $("#itemTable").DataTable({
         autoWidth : false,
         data      : items,
+        // To disable fuzzy search:
+        // search: {
+        //     smart: false
+        // },
+        oLanguage: {
+            sSearch: "<abbr title='Fuzzy searching is ON. To search exact text, wrap your search in \"quotes\"'>Search</abbr>"
+        },
         columns   : [
             {
                 title  : `<span class="fas fa-fw fa-skull-crossbones"></span> ${headerBoss}`,
@@ -110,7 +117,7 @@ function createTable(lastSource) {
             },
             {
                 title  : `<span class="fas fa-fw fa-sort-amount-down text-gold"></span> ${headerPrios}`,
-                data   : guild.is_attendance_hidden ? "priod_characters" : "priod_characters_with_attendance",
+                data   : "priod_characters",
                 render : function (data, type, row) {
                     return data && data.length ? createCharacterListHtml(data, 'prio', row.item_id, null) : '—';
                 },
@@ -121,7 +128,7 @@ function createTable(lastSource) {
             },
             {
                 title  : `<span class="text-legendary fas fa-fw fa-scroll-old"></span> ${headerWishlist}`,
-                data   : guild.is_attendance_hidden ? "wishlist_characters" : "wishlist_characters_with_attendance",
+                data   : "wishlist_characters",
                 render : function (data, type, row) {
                     if (data && data.length) {
                         let list = '';
@@ -239,6 +246,12 @@ function createCharacterListHtml(data, type, itemId, header = null) {
 
     let lastRaidGroupId = null;
     $.each(data, function (index, character) {
+
+        let attendanceCharacter = null;
+        if (!guild.is_attendance_hidden) {
+            attendanceCharacter = guildCharacters.find(char => char.id == character.id);
+        }
+
         if (type == 'prio' && character.pivot.raid_group_id && character.pivot.raid_group_id != lastRaidGroupId) {
             lastRaidGroupId = character.pivot.raid_group_id;
             let raidGroupName = '';
@@ -284,25 +297,30 @@ function createCharacterListHtml(data, type, itemId, header = null) {
                 data-offspec="${ character.pivot.is_offspec ? 1 : 0}"
                 value="${ type == 'prio' ? character.pivot.order : '' }"
                 class="js-item-wishlist-character list-inline-item font-weight-normal mb-1 mr-0 ${ character.pivot.type != 'received' && character.pivot.received_at ? 'font-strikethrough' : '' }">
-                <a href="/${ guild.id }/${ guild.slug }/c/${ character.id }/${ character.slug }"
-                    title="${ character.raid_group_name ? character.raid_group_name + ' -' : '' } ${ character.level ? character.level : '' } ${ character.race ? character.race : '' } ${ character.spec ? character.spec : '' } ${ character.class ? character.class : '' } ${ character.raid_count ? `(${ character.raid_count } raid${ character.raid_count > 1 ? 's' : '' } attended)` : `` } ${ character.username ? '(' + character.username + ')' : '' }"
-                    class="tag text-muted d-inline">
-                    <span class="">${ type !== 'received' && character.pivot.order ? (character.pivot.order - character.attendance_order_modifier - (character.personal_order_modifier * -1)).toFixed(1) : '' }</span>
-                    <span class="small font-weight-bold">${ character.pivot.is_offspec ? 'OS' : '' }</span>
-                    <span class="role-circle" style="background-color:${ getColorFromDec(character.raid_group_color) }"></span>
-                    <span class="text-${ character.class ? character.class.toLowerCase() : '' }-important">${ character.name }</span>
-                    ${ character.is_alt ? `
-                        <span class="text-warning">${localeAlt}</span>
-                    ` : '' }
-                    ${ !guild.is_attendance_hidden && (character.attendance_percentage || character.raid_count) ?
-                        `${ character.raid_count && typeof character.attendance_percentage === 'number' ? `<span title="attendance" class="smaller ${ getAttendanceColor(character.attendance_percentage) }">${ Math.round(character.attendance_percentage * 100) }%</span>` : '' }${ character.raid_count ? `<span class="smaller"> ${ character.raid_count }r</span>` : ``}
-                    ` : `` }
-                    <span class="js-watchable-timestamp smaller"
+                <span class="tag text-muted d-inline">
+                    <a href="/${ guild.id }/${ guild.slug }/c/${ character.id }/${ character.slug }"
+                        title="${ character.raid_group_name ? character.raid_group_name + ' -' : '' } ${ character.level ? character.level : '' } ${ character.race ? character.race : '' } ${ character.spec ? character.spec : '' } ${ character.class ? character.class : '' } ${ character.raid_count ? `(${ character.raid_count } raid${ character.raid_count > 1 ? 's' : '' } attended)` : `` } ${ character.username ? '(' + character.username + ')' : '' }"
+                        class="text-muted">
+                        <span class="">${ type !== 'received' && character.pivot.order ? (character.pivot.order - character.attendance_order_modifier - (character.personal_order_modifier * -1)).toFixed(1) : '' }</span>
+                        <span class="small font-weight-bold">${ character.pivot.is_offspec ? 'OS' : '' }</span>
+                        <span class="role-circle" style="background-color:${ getColorFromDec(character.raid_group_color) }"></span>
+                        <span class="text-${ character.class ? character.class.toLowerCase() : '' }-important">${ character.name }</span>
+                        ${ character.is_alt ? `
+                            <span class="text-warning">${localeAlt}</span>
+                        ` : '' }
+                        ${ type !== 'received' && attendanceCharacter && (attendanceCharacter.attendance_percentage || attendanceCharacter.raid_count) ?
+                            `${ attendanceCharacter.raid_count && typeof attendanceCharacter.attendance_percentage === 'number'
+                                ? `<span title="attendance" class="smaller ${ getAttendanceColor(attendanceCharacter.attendance_percentage) }">${ Math.round(attendanceCharacter.attendance_percentage * 100) }%</span>`
+                                : '' }${ attendanceCharacter.raid_count ? `<span class="smaller"> ${ attendanceCharacter.raid_count }r</span>` : ``}
+                        ` : `` }
+                    </a>
+                    <span class="js-watchable-timestamp js-timestamp-title smaller"
                         data-timestamp="${ character.pivot.created_at }"
                         data-is-short="1">
                     </span>
                     <span style="display:none;">${ character.discord_username } ${ character.username }</span>
-                </a>
+                    ${ character.pivot.note ? `<span class="smaller text-muted text-underline" title="${ character.pivot.note }">note</span>` : '' }
+                </span>
             </li>`;
     });
 
@@ -372,6 +390,7 @@ function callItemListHandlers() {
         makeWowheadLinks();
         parseMarkdown();
         trackTimestamps();
+        addTooltips();
     }, 500); // 0.5s delay
 }
 

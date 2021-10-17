@@ -39,7 +39,7 @@ class CheckGuildPermissions
             });
 
             if (!$guild) {
-                abort(404, 'Guild not found.');
+                abort(404, __('Guild not found.'));
             }
 
             if ($guild->slug !== $request->route('guildSlug')) {
@@ -50,7 +50,12 @@ class CheckGuildPermissions
             $isAdmin = request()->get('isAdmin');
 
             if (!$user) {
-                request()->session()->flash('status', 'You need to be signed in to do that.');
+                // Exception for this page; redirect them to the public one
+                if (request()->route()->getName() === 'guild.loot.wishlist') {
+                    return redirect()->route('loot.wishlist', ['expansionName' => getExpansionAbbr($guild->expansion_id, true), 'class' => request()->route('class')]);
+                }
+
+                request()->session()->flash('status', __('You need to be signed in to do that.'));
                 return redirect()->route('login');
             }
 
@@ -65,7 +70,7 @@ class CheckGuildPermissions
             }
 
             // Check if current user is on that guild's Discord
-            // Cache to results
+            // Cache the results
             $discordMember = Cache::remember($cacheKey, env('DISCORD_ROLE_CACHE_SECONDS', 30),
                 function () use ($user, $guild) {
                     try {
@@ -90,7 +95,12 @@ class CheckGuildPermissions
             // Don't do these checks if the member is trying to gquit...
             if (!request()->routeIs('member.showGquit') && !request()->routeIs('member.submitGquit')) {
                 if (!$discordMember && $user->id != $guild->user_id && !$isAdmin) { // Guild owner gets a pass
-                    request()->session()->flash('status', 'That Discord server is either missing the ' . env('APP_NAME') . ' bot or we\'re unable to find you on it.');
+                    // Exception for this page; redirect them to the public one
+                    if (request()->route()->getName() === 'guild.loot.wishlist') {
+                        return redirect()->route('loot.wishlist', ['expansionName' => getExpansionAbbr($guild->expansion_id, true), 'class' => request()->route('class')]);
+                    }
+
+                    request()->session()->flash('status', __("That Discord server is either missing the :appName bot or we're unable to find you on it.", ['appName' => env('APP_NAME')]));
                     return redirect()->route('home');
                 }
 
@@ -102,7 +112,7 @@ class CheckGuildPermissions
                         $matchingRoles = array_intersect(array_merge($guild->getMemberRoleIds(), [$guild->gm_role_id, $guild->officer_role_id, $guild->raid_leader_role_id]), $discordMember->roles);
 
                         if (count($matchingRoles) <= 0) {
-                            request()->session()->flash('status', 'Insufficient Discord role to access that guild.');
+                            request()->session()->flash('status', __('Insufficient Discord role to access that guild.'));
                             return redirect()->route('home');
                         }
                     }
@@ -113,9 +123,9 @@ class CheckGuildPermissions
                 // Check if the guild is disabled
                 if ($guild->disabled_at && $user->id != $guild->user_id && !$isAdmin) {
                     $message = '';
-                    $message .= $guild->name . ' disabled by guild master.';
+                    $message .= __(':guildName disabled by guild master.', ['guildName' => $guild->name]);
                     if ($guild->message) {
-                        $message .= '<br><strong>Message of the Day:</strong><br>' . nl2br($guild->message);
+                        $message .= '<br><strong>' . __('Message of the Day:') . '</strong><br>' . nl2br($guild->message);
                     }
 
                     request()->session()->flash('status-danger',  $message);
@@ -127,7 +137,7 @@ class CheckGuildPermissions
             $currentMember = Member::where(['guild_id' => $guild->id, 'user_id' => Auth::id()])->with(['characters', 'roles'])->first();
 
             if ($currentMember && ($currentMember->banned_at || $currentMember->inactive_at) && !$isAdmin) {
-                request()->session()->flash('status-danger',  'Your membership has been disabled. To reverse this, an officer would need to access your member page and re-enable it.');
+                request()->session()->flash('status-danger',  __('Your membership has been disabled. To reverse this, an officer would need to access your member page and re-enable it.'));
                 return redirect()->route('home');
             }
 
@@ -145,7 +155,7 @@ class CheckGuildPermissions
                 } else {
                     $currentMember = Member::where('user_id', $user->id)->first();
                     if (!$currentMember) {
-                        abort(403, "You must have at least one member object tied to your account to access someone else's guild as an admin. The code demands there must always be a member object!");
+                        abort(403, __("You must have at least one member object tied to your account to access someone else's guild as an admin. The code demands there must always be a member object!"));
                     }
                     $request->attributes->add(['isNotYourGuild' => true]);
                 }

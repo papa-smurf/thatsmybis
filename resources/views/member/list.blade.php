@@ -28,10 +28,10 @@
                     </thead>
                     <tbody>
                         @if ($unassignedCharacters->whereNull('inactive_at')->count() > 0)
-                            <tr>
+                            <tr class="{{ request()->input('unclaimed') ? 'highlight bg-lightest' : '' }}">
                                 <td>
                                     <span class="font-weight-bold text-danger">
-                                        {{ __("Unassigned") }} <span class="text-muted small">({{ $unassignedCharacters->whereNull('inactive_at')->count() }})</span>
+                                        {{ __("Unclaimed") }} <span class="text-muted small">({{ $unassignedCharacters->whereNull('inactive_at')->count() }})</span>
                                     </span>
                                     <br>
                                     <span class="text-muted small">
@@ -41,7 +41,7 @@
                                 <td>
                                     <ul class="list-inline">
                                         @foreach($unassignedCharacters->whereNull('inactive_at')->sortBy('name') as $character)
-                                            @include('member/partials/listMemberCharacter')
+                                            @include('member/partials/listMemberCharacter', ['tag' => 1])
                                         @endforeach
                                     </ul>
                                 </td>
@@ -55,23 +55,23 @@
                             <tr>
                                 <td>
                                     @php
-                                        $benchedCount = $member->charactersWithAttendance->sum(function ($character) {
+                                        $benchedCount = $member->characters->sum(function ($character) {
                                             return $character->benched_count;
                                         });
-                                        $raidCount = $member->charactersWithAttendance->sum(function ($character) {
+                                        $raidCount = $member->characters->sum(function ($character) {
                                             return $character->raid_count;
                                         });
-                                        $raidsAttended = $member->charactersWithAttendance->where('raid_count', '>', 0)->sum(function ($character) {
+                                        $raidsAttended = $member->characters->where('raid_count', '>', 0)->sum(function ($character) {
                                             return $character->raid_count * $character->attendance_percentage;
                                         });
                                         $attendancePercentage = $raidCount > 0 ? ($raidsAttended / $raidCount) : 100;
                                     @endphp
-                                    @include('member/partials/listMember', ['raidCount' => $raidCount, 'attendancePercentage' => $attendancePercentage])
+                                    @include('member/partials/listMember', [ 'attendancePercentage' => $attendancePercentage, 'raidCount' => $raidCount, 'tag' => 1])
                                 </td>
                                 <td>
                                     <ul class="list-inline">
-                                        @foreach($member->charactersWithAttendance->sortBy('name') as $character)
-                                            @include('member/partials/listMemberCharacter')
+                                        @foreach($member->characters->sortBy('name') as $character)
+                                            @include('member/partials/listMemberCharacter', ['tag' => 1])
                                         @endforeach
                                     </ul>
                                 </td>
@@ -172,14 +172,17 @@
 <script>
 $(document).ready(function () {
     $("#members").DataTable({
-        "order"  : [], // Disable initial auto-sort; relies on server-side sorting
-        "paging" : false,
-        "fixedHeader" : true, // Header row sticks to top of window when scrolling down
-        "columns" : [
+        order  : [], // Disable initial auto-sort; relies on server-side sorting
+        paging : false,
+        fixedHeader : true, // Header row sticks to top of window when scrolling down
+        oLanguage: {
+            sSearch: "<abbr title='{{ __('Fuzzy searching is ON. To search exact text, wrap your search in \"quotes\"') }}'>{{ __('Search') }}</abbr>"
+        },
+        columns : [
             null,
-            { "orderable" : false },
-            { "orderable" : false },
-            { "orderable" : false },
+            { orderable : false },
+            { orderable : false },
+            { orderable : false },
         ]
     });
 

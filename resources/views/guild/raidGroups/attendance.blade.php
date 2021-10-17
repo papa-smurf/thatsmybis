@@ -70,7 +70,7 @@
                                         <ul class="no-indent no-bullet">
                                             <a href="{{ route('guild.raids.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'raidId' => $raid->id, 'raidSlug' => $raid->slug]) }}">
                                                 <li class="">
-                                                    <span class="js-timestamp text-muted" data-timestamp="{{ $raid->date }}" data-format="MMM D 'YY"></span>
+                                                    <span class="js-timestamp text-muted small" data-timestamp="{{ $raid->date }}" data-format="MMM D 'YY"></span>
                                                 </li>
                                                 @if ($raid->instances->count())
                                                     <li class="">
@@ -156,14 +156,14 @@
                                                         @endif
                                                         @if ($raidCharacter->pivot->public_note)
                                                             <li>
-                                                                <span class="js-markdown-inline">{{ $raidCharacter->pivot->public_note }}</span>
+                                                                <span class="js-markdown-inline small">{{ $raidCharacter->pivot->public_note }}</span>
                                                             </li>
                                                         @endif
                                                         @if ($showOfficerNote && $raidCharacter->pivot->officer_note)
                                                             <li>
                                                                 <span class="font-weight-bold small font-italic text-gold">{{ __("Officer's Note") }}</span>
                                                                 <br>
-                                                                <span class="js-markdown-inline">{{ $raidCharacter->pivot->officer_note }}</span>
+                                                                <span class="js-markdown-inline small">{{ $raidCharacter->pivot->officer_note }}</span>
                                                             </li>
                                                         @endif
                                                     @endif
@@ -205,17 +205,20 @@
 <script>
 $(document).ready(function () {
     $("#raids").DataTable({
-        "order"  : [], // Disable initial auto-sort; relies on server-side sorting
-        "paging" : false,
-        "fixedHeader" : true, // Header row sticks to top of window when scrolling down
-        "columns" : [
-            { "orderable" : true, "className": "width-10pct"},
+        order  : [], // Disable initial auto-sort; relies on server-side sorting
+        paging : false,
+        fixedHeader : true, // Header row sticks to top of window when scrolling down
+        oLanguage: {
+            sSearch: "<abbr title='{{ __('Fuzzy searching is ON. To search exact text, wrap your search in \"quotes\"') }}'>{{ __('Search') }}</abbr>"
+        },
+        columns : [
+            { orderable : true, className: "width-10pct"},
             @if ($raids->count())
                 @foreach ($raids as $raid)
-                    { "orderable" : false, "className": "width-10pct"},
+                    { orderable : false, className: "width-10pct"},
                 @endforeach
             @else
-                { "orderable" : false, "className": "width-10pct"},
+                { orderable : false, className: "width-10pct"},
             @endif
         ]
     });

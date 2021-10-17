@@ -288,10 +288,21 @@
                     </div>
                 </li>
 
-                <li class="nav-item {{ in_array(Route::currentRouteName(), ['guild.roster']) ? 'active' : '' }}">
-                    <a class="nav-link {{ $menuColor }}" href="{{ route('guild.roster', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {{ $menuColor }} {{ in_array(Route::currentRouteName(), [
+                            'guild.roster',
+                            'guild.rosterStats',
+                        ]) ? 'active font-weight-bold' : '' }}" href="#" id="rosterNavDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         {{ __("Roster") }}
                     </a>
+                    <div class="dropdown-menu" aria-labelledby="rosterNavDropdown">
+                        <a class="dropdown-item" href="{{ route('guild.roster', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
+                            {{ __("Loot") }}
+                        </a>
+                        <a class="dropdown-item" href="{{ route('guild.rosterStats', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
+                            {{ __("Stats") }}
+                        </a>
+                    </div>
                 </li>
 
                 {{-- Why hello there... yes. Yes, there is a 'news' page. No, I don't quite think it's ready for the mainstream yet.
@@ -411,12 +422,9 @@
                         <a class="dropdown-item" href="{{ route('guild.exports', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
                             {{ __("Exports") }}
                         </a>
-                        <form role="form" method="POST" target="_blank" action="{{ route('guild.export.gargul', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
-                            {{ csrf_field() }}
-                            <button class="dropdown-item text-white" type="submit">
-                                {{ __("Export Gargul") }}
-                            </button>
-                        </form>
+                        <a class="dropdown-item" href="{{ route('guild.export.gargul', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
+                            {{ __("Export Gargul") }}
+                        </a>
                         <a class="dropdown-item" target="_blank" href="{{ route('guild.export.addonItems', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'fileType' => 'html']) }}">
                             {{ __("Export TMB Tooltips") }}
                         </a>
@@ -441,7 +449,7 @@
             @if (isset($guild))
                 <li class="nav-item mr-3 d-patreon-block">
                     <a class="dropdown-item text-4 text-patreon" href="https://www.patreon.com/lemmings19" target="_blank" title="Patreon donations">
-                    <a href="https://www.patreon.com/lemmings19" target="_blank" class="nav-link active small font-weight-bold text-patreon"
+                    <a href="{{ route('donate') }}" target="_blank" class="nav-link active small font-weight-bold text-patreon"
                         title="Toss a coin to your web dev">
                         <span class="fas fa-fw fa-sack"></span>
                         {{ __("Support TMB") }}

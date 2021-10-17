@@ -218,6 +218,17 @@
                 </div>
             </div>
 
+            <div class="row mb-3 pt-3 bg-light rounded">
+                <div class="col-12 pb-3">
+                    <label class="sr-only">{{ __("Received") }}</label>
+                    @if ($character->raids->count())
+                        @include('partials/itemSlotsTable', ['items' => $character->received])
+                    @else
+                        {{ __("None yet") }}
+                    @endif
+                </div>
+            </div>
+
             <form id="noteForm" role="form" method="POST" action="{{ route('character.updateNote', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}">
                 {{ csrf_field() }}
 
@@ -330,12 +341,28 @@
 <script>
     $(document).ready(function () {
         $("#raids").DataTable({
-            "order"       : [], // Disable initial auto-sort; relies on server-side sorting
-            "paging"      : true,
-            "pageLength"  : 5,
-            "fixedHeader" : false, // Header row sticks to top of window when scrolling down
-            "columns" : [
-                { "orderable" : false },
+            order       : [], // Disable initial auto-sort; relies on server-side sorting
+            paging      : true,
+            pageLength  : 5,
+            fixedHeader : false, // Header row sticks to top of window when scrolling down
+            oLanguage: {
+                sSearch: "<abbr title='{{ __('Fuzzy searching is ON. To search exact text, wrap your search in \"quotes\"') }}'>{{ __('Search') }}</abbr>"
+            },
+            columns : [
+                { orderable : false },
+            ]
+        });
+
+        $("#itemSlots").DataTable({
+            order       : [], // Disable initial auto-sort; relies on server-side sorting
+            paging      : false,
+            fixedHeader : false, // Header row sticks to top of window when scrolling down
+            oLanguage: {
+                sSearch: "<abbr title='{{ __('Fuzzy searching is ON. To search exact text, wrap your search in \"quotes\"') }}'>{{ __('Search') }}</abbr>"
+            },
+            columns : [
+                { orderable : false },
+                { orderable : false },
             ]
         });
 

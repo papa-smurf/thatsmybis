@@ -36,7 +36,6 @@ class Item extends BaseModel
      * @var array
      */
     protected $hidden = [
-        'inventory_type',
         'allowable_class',
         'item_level',
         'name_cn',
@@ -55,6 +54,36 @@ class Item extends BaseModel
     const TYPE_RECEIVED = 'received';
     const TYPE_RECIPE   = 'recipe';
     const TYPE_WISHLIST = 'wishlist';
+
+    const SLOT_MISC      = 0; // ammo, mount, book, etc
+    const SLOT_HEAD      = 1; // head
+    const SLOT_NECK      = 2; // neck
+    const SLOT_SHOULDERS = 3; // shoulder
+    const SLOT_SHIRT     = 4; // shirt
+    const SLOT_CHEST_1   = 5; // chest
+    const SLOT_WAIST     = 6; // waist
+    const SLOT_LEGS      = 7; // legs
+    const SLOT_FEET      = 8; // feet
+    const SLOT_WRIST     = 9; // wrist
+    const SLOT_HANDS     = 10; // hand
+    const SLOT_FINGER    = 11; // finger
+    const SLOT_TRINKET   = 12; // trinket
+    const SLOT_WEAPON_MAIN_HAND = 13; // weapon, 1 hander
+    const SLOT_SHIELD           = 14; // shield
+    const SLOT_RANGED_1         = 15; // bow
+    const SLOT_BACK             = 16; // cloak
+    const SLOT_WEAPON_TWO_HAND  = 17; // 2h weapon
+    const SLOT_BAG              = 18; // bag, quiver/ammo pouch
+    // 19; //// nothing (after my filters, I found nothing in here)
+    const SLOT_CHEST_2          = 20; // cloth chest
+    const SLOT_WEAPON_ONE_HAND  = 21; // more 1h weapons
+    const SLOT_WEAPON_OFF_HAND  = 22; // offhand 1h weapon
+    const SLOT_OFFHAND          = 23; // offhand non-weapon
+    const SLOT_AMMO             = 24; // ammo
+    const SLOT_THROWN           = 25; // thrown
+    const SLOT_RANGED_2         = 26; // crossbow, gun, wand
+    // 27; //// nothing (after my filters, I found nothing in here)
+    const SLOT_RELIC            = 28; // totem/idol/libram
 
     public function childItems() {
         return $this->hasMany(Item::class, 'parent_id', 'id')
@@ -81,10 +110,6 @@ class Item extends BaseModel
             ->orderBy('characters.name');
     }
 
-    public function charactersWithAttendance() {
-        $query = $this->characters();
-        return Character::addAttendanceQuery($query)->groupBy('characters.id');
-    }
 
     public function expansion() {
         return $this->belongsTo(Expansion::class);
@@ -129,6 +154,7 @@ class Item extends BaseModel
                 'added_by',
                 'raid_group_id',
                 'type',
+                'note',
                 'is_received',
                 'is_offspec',
                 'received_at',
@@ -138,11 +164,6 @@ class Item extends BaseModel
             ->orderBy('character_items.raid_group_id')
             ->orderBy('character_items.order')
             ->orderBy('characters.name');
-    }
-
-    public function priodCharactersWithAttendance() {
-        $query = $this->priodCharacters();
-        return Character::addAttendanceQuery($query)->groupBy('characters.id');
     }
 
     public function receivedCharacters() {
@@ -175,11 +196,6 @@ class Item extends BaseModel
                 'received_at',
             ])
             ->orderBy('characters.name');
-    }
-
-    public function receivedCharactersWithAttendance() {
-        $query = $this->receivedCharacters();
-        return Character::addAttendanceQuery($query)->groupBy('characters.id');
     }
 
     public function receivedAndRecipeCharacters() {
@@ -215,11 +231,6 @@ class Item extends BaseModel
             ->orderBy('characters.name');
     }
 
-    public function receivedAndRecipeCharactersWithAttendance() {
-        $query = $this->receivedAndRecipeCharacters();
-        return Character::addAttendanceQuery($query)->groupBy('characters.id');
-    }
-
     public function wishlistCharacters() {
         return $this->belongsToMany(Character::class, 'character_items', 'item_id', 'character_id')
             ->select([
@@ -240,13 +251,14 @@ class Item extends BaseModel
             })
             ->where([
                 'character_items.type'        => self::TYPE_WISHLIST,
-                // 'character_items.list_number' => DB::raw('wishlist_guilds.current_wishlist_number'),
+                // 'character_items.list_number' => DB::raw('`wishlist_guilds`.`current_wishlist_number`'),
             ])
             ->whereNull('characters.inactive_at')
             ->withTimeStamps()
             ->withPivot([
                 'added_by',
                 'type',
+                'note',
                 'order',
                 'is_received',
                 'list_number',
@@ -256,10 +268,5 @@ class Item extends BaseModel
                 'raid_id',
                 'created_at',
             ]);
-    }
-
-    public function wishlistCharactersWithAttendance() {
-        $query = $this->wishlistCharacters();
-        return Character::addAttendanceQuery($query);
     }
 }

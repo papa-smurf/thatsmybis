@@ -8,7 +8,7 @@
             <div class="row mb-3">
                 <div class="col-12 pt-2 bg-lightest rounded">
                     @php
-                        $benchedCount = $member->charactersWithAttendance->sum(function ($character) {
+                        $benchedCount = $member->characters->sum(function ($character) {
                             return $character->benched_count;
                         });
                         $raidCount = $characters->sum(function ($character) {
@@ -38,7 +38,6 @@
                     @if ($member->characters->count())
                         @php
                             $raids = collect();
-                            $characeters = ($guild->is_attendance_hidden ? $member->characters : $member->charactersWithAttendance);
                             foreach ($characters as $character) {
                                 $raids = $raids->merge($character->raids);
                             }
@@ -75,7 +74,7 @@
                                     </li>
                                     @if ($unassignedCharacterCount > 0)
                                         <li class="list-inline-item">
-                                            <a href="{{ route('guild.members.list', ['guildId' => $guild->id, 'guildSlug' => $guild->slug]) }}" class="btn btn-link">
+                                            <a href="{{ route('guild.members.list', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'unclaimed' => 1]) }}" class="btn btn-link">
                                                 {{ __("View Unclaimed Characters") }} <span class="small text-muted">({{ $unassignedCharacterCount }})</span>
                                             </a>
                                         </li>
@@ -263,12 +262,15 @@ $(document).ready(function () {
     warnBeforeLeaving("#noteForm");
 
     $("#raids").DataTable({
-        "order"       : [], // Disable initial auto-sort; relies on server-side sorting
-        "paging"      : true,
-        "pageLength"  : 5,
-        "fixedHeader" : false, // Header row sticks to top of window when scrolling down
-        "columns" : [
-            { "orderable" : false },
+        order       : [], // Disable initial auto-sort; relies on server-side sorting
+        paging      : true,
+        pageLength  : 5,
+        fixedHeader : false, // Header row sticks to top of window when scrolling down
+        oLanguage: {
+            sSearch: "<abbr title='{{ __('Fuzzy searching is ON. To search exact text, wrap your search in \"quotes\"') }}'>{{ __('Search') }}</abbr>"
+        },
+        columns : [
+            { orderable : false },
         ]
     });
 

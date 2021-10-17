@@ -13,15 +13,23 @@
 
 Route::get('/home', function () {request()->session()->reflash(); return redirect()->route('home');}); // Laravel's framework directs to '/home' in several scenarios...
 Route::get( '/',    'HomeController@index')->name('home');
+// Route::get( '/about',   'HomeController@about')  ->name('about');
+// Route::get( '/contact', 'HomeController@contact')->name('contact');
+Route::get( '/faq',     'HomeController@faq')    ->name('faq');
+Route::get( '/privacy', 'HomeController@privacy')->name('privacy');
+Route::get( '/terms',   'HomeController@terms')  ->name('terms');
+Route::get( '/donate',  'HomeController@donate') ->name('donate');
 
 // Authentication routes:
-Route::get( 'login',  'Auth\LoginController@showLoginForm')->name('login');
+Route::get( 'login', 'Auth\LoginController@showLoginForm')->name('login');
 Route::post('login',  'Auth\LoginController@login');
 Route::get( 'logout', 'Auth\LoginController@logout');
 Route::post('logout', 'Auth\LoginController@logout')       ->name('logout');
+Route::get( 'crawlerLogin', 'Auth\LoginController@showCrawlerLoginForm')->name('crawlerLogin');
+Route::post('crawlerLogin', 'Auth\LoginController@crawlerLogin');
 // Registration routes:
-Route::get( 'register',             'Auth\RegisterController@showRegistrationForm')->name('register');
-Route::post('register',             'Auth\RegisterController@register');
+Route::get( 'register', 'Auth\RegisterController@showRegistrationForm')->name('register');
+Route::post('register', 'Auth\RegisterController@register');
 // Password Reset routes:
 // Route::get( 'password/reset',         'Auth\ForgotPasswordController@showLinkRequestForm')->name('password.request');
 // Route::post('password/email',         'Auth\ForgotPasswordController@sendResetLinkEmail') ->name('password.email');
@@ -33,23 +41,17 @@ Route::post('register',             'Auth\RegisterController@register');
 // Route::get('email/resend',      'Auth\VerificationController@resend') ->name('verification.resend');
 Route::group(['prefix' => 'auth'], function () {
     // Discord sign-in
-    Route::get('/discord',          'Auth\LoginController@redirectToDiscord')    ->name('discordLogin');
+    Route::get('/discord',          'Auth\LoginController@redirectToDiscord')->name('discordLogin');
     Route::get('/discord/callback', 'Auth\LoginController@handleDiscordCallback');
 });
 
 Route::group(['prefix' => 'loot', 'middleware' => ['seeUser']], function () {
-    Route::get('/',                                      'LootController@show')                 ->name('loot');
-    Route::get('/list/{expansionId}/{instanceSlug}',     'LootController@list')                 ->name('loot.list');
-    Route::get('/table/{expansionSlug}/{type}',          'ExportController@exportExpansionLoot')->name('loot.table');
-    Route::get('/wishlists/{expansionId}',               'LootController@showWishlistStats')    ->name('loot.wishlist');
+    Route::get('/',                                   'LootController@show')                 ->name('loot');
+    Route::get('/list/{expansionId}/{instanceSlug}',  'LootController@list')                 ->name('loot.list');
+    Route::get('/table/{expansionSlug}/{type}',       'ExportController@exportExpansionLoot')->name('loot.table');
+    Route::get('/wishlists/{expansionName}/{class?}', 'LootController@showWishlistStats')    ->name('loot.wishlist');
 });
 
-// Route::get( '/about',   'HomeController@about')  ->name('about');
-// Route::get( '/contact', 'HomeController@contact')->name('contact');
-Route::get( '/faq',     'HomeController@faq')    ->name('faq');
-Route::get( '/privacy', 'HomeController@privacy')->name('privacy');
-Route::get( '/terms',   'HomeController@terms')  ->name('terms');
-Route::get( '/donate',  'HomeController@donate') ->name('donate');
 Route::get( '/translations', 'HomeController@translations')->name('translations');
 
 Route::get( '/register-guild', 'GuildController@showRegister')->name('guild.showRegister');
@@ -74,7 +76,6 @@ Route::group([
         'prefix'     => '{guildId}/{guildSlug}',
         'where'      => ['guildId' => '[0-9]+'],
     ], function () {
-
     Route::get( '/',                'GuildController@home')              ->name('guild.home');
 
     Route::get( '/audit-log',       'AuditLogController@index')          ->name('guild.auditLog');
@@ -92,12 +93,14 @@ Route::group([
         Route::get( '/{nameSlug}',                    'CharacterController@find')      ->name('character.find');
         Route::get( '/{characterId}/{nameSlug}/loot', 'CharacterLootController@loot')      ->name('character.loot');
         Route::post('/loot/update',                   'CharacterLootController@updateLoot')->name('character.updateLoot');
+
     });
 
     Route::get( '/gquit', 'MemberController@showGquit')  ->name('member.showGquit');
     Route::post('/gquit', 'MemberController@submitGquit')->name('member.submitGquit');
 
-    Route::get( '/loot/recipes',   'RecipeController@listRecipesWithGuild')  ->name('guild.recipe.list');
+    Route::get( '/loot/wishlists/{class?}', 'LootController@showWishlistStatsInGuild')->name('guild.loot.wishlist');
+    Route::get( '/loot/recipes',            'RecipeController@listRecipesWithGuild')  ->name('guild.recipe.list');
 
     Route::get( '/loot/{instanceSlug}',      'ItemController@listWithGuild')           ->name('guild.item.list');
     Route::get( '/loot/{instanceSlug}/edit', 'ItemNoteController@listWithGuildEdit')   ->name('guild.item.list.edit');
@@ -128,7 +131,8 @@ Route::group([
     // Route::get( '/resources/{slug}', 'ContentController@show') ->name('showContent');
     // Route::get( '/posts/{slug}',     'ContentController@show') ->name('showPost');
 
-    Route::get( '/roster',          'RosterController@roster')->name('guild.roster');
+    Route::get( '/roster',       'RosterController@roster')->name('guild.roster');
+    Route::get( '/roster-stats', 'RosterController@rosterStats')->name('guild.rosterStats');
 
     Route::get( '/assign-loot',                'AssignLootController@assignLoot')      ->name('item.assignLoot');
     Route::post('/assign-loot',                'AssignLootController@submitAssignLoot')->name('item.assignLoot.submit');
@@ -140,19 +144,19 @@ Route::group([
         Route::get( '/',                'RaidController@list')    ->name('guild.raids.list');
         Route::get( '/new',             'RaidController@showEdit')->name('guild.raids.new');
         Route::get( '/copy/{raidId}',   'RaidController@copy',   )->name('guild.raids.copy');
-        Route::get( '/edit/{raidId}',   'RaidController@showEdit')->where('id', '[0-9]+')->name('guild.raids.edit');
+        Route::get( '/edit/{raidId}',   'RaidController@showEdit')->name('guild.raids.edit')->where('id', '[0-9]+');
         Route::post('/update',          'RaidController@update')  ->name('guild.raids.update');
         Route::post('/new',             'RaidController@create')  ->name('guild.raids.create');
-        Route::get( '/{raidId}/{raidSlug?}', 'RaidController@show')->where('id', '[0-9]+')->name('guild.raids.show');
+        Route::get( '/{raidId}/{raidSlug?}', 'RaidController@show')->name('guild.raids.show')->where('id', '[0-9]+');
     });
 
     Route::group(['prefix' => 'raid-groups'], function () {
         Route::get( '/',                        'RaidGroupController@raidGroups')               ->name('guild.raidGroups');
         Route::get( '/create',                  'RaidGroupController@edit')                     ->name('guild.raidGroup.create');
-        Route::get( '/edit/{id?}',              'RaidGroupController@edit')                     ->where('id', '[0-9]+')->name('guild.raidGroup.edit');
+        Route::get( '/edit/{id?}',              'RaidGroupController@edit')                     ->name('guild.raidGroup.edit')->where('id', '[0-9]+');
         Route::get( '/{id}/attendance',         'RaidGroupController@attendance')               ->name('guild.raidGroup.attendance');
-        Route::get( '/{id}/characters/main',    'RaidGroupController@mainCharacters')           ->where('id', '[0-9]+')->name('guild.raidGroup.mainCharacters');
-        Route::get( '/{id}/characters/general', 'RaidGroupController@secondaryCharacters')      ->where('id', '[0-9]+')->name('guild.raidGroup.secondaryCharacters');
+        Route::get( '/{id}/characters/main',    'RaidGroupController@mainCharacters')           ->name('guild.raidGroup.mainCharacters')->where('id', '[0-9]+');
+        Route::get( '/{id}/characters/general', 'RaidGroupController@secondaryCharacters')      ->name('guild.raidGroup.secondaryCharacters')->where('id', '[0-9]+');
         Route::post('/toggle-disable',          'RaidGroupController@toggleDisable')            ->name('guild.raidGroup.toggleDisable');
         Route::post('/update',                  'RaidGroupController@update')                   ->name('guild.raidGroup.update');
         Route::post('/update-characters',       'RaidGroupController@updateMainCharacters')     ->name('guild.raidGroup.updateMainCharacters');
@@ -160,8 +164,8 @@ Route::group([
         Route::post('/',                        'RaidGroupController@create')                   ->name('guild.raidGroup.create'); // TODO: This or the copy a few lines up needs to go, wuth some testing
 
         Route::group(['prefix' => 'prio'], function () {
-            Route::get( '/{instanceSlug}',               'PrioController@chooseRaidGroup')->name('guild.prios.chooseRaidGroup');
-            Route::get( '/{instanceSlug}/{raidGroupId}', 'PrioController@assignPrios')       ->where('raidGroupId', '[0-9]+')->name('guild.prios.assignPrios');
+            Route::get( '/{instanceSlug}',               'PrioController@chooseRaidGroup')  ->name('guild.prios.chooseRaidGroup');
+            Route::get( '/{instanceSlug}/{raidGroupId}', 'PrioController@assignPrios')      ->name('guild.prios.assignPrios')->where('raidGroupId', '[0-9]+');
             Route::post('/',                             'PrioController@submitAssignPrios')->name('guild.prios.assignPrios.submit');
         });
     });
@@ -172,11 +176,11 @@ Route::group([
     Route::get( '/roles',     'RoleController@roles')    ->name('guild.roles');
     Route::get( '/syncRoles', 'RoleController@syncRoles')->name('guild.syncRoles');
 
-    Route::get( '/settings',  'GuildController@settings')->name('guild.settings');
-    Route::post('/settings',  'GuildController@submitSettings')->name('guild.submitSettings');
+    Route::get( '/settings', 'GuildController@settings')      ->name('guild.settings');
+    Route::post('/settings', 'GuildController@submitSettings')->name('guild.submitSettings');
 
-    Route::get( '/change-owner',  'GuildController@owner')      ->name('guild.owner');
-    Route::post('/change-owner',  'GuildController@submitOwner')->name('guild.submitOwner');
+    Route::get( '/change-owner', 'GuildController@owner')      ->name('guild.owner');
+    Route::post('/change-owner', 'GuildController@submitOwner')->name('guild.submitOwner');
 
     Route::get( '/change-discord', 'GuildController@changeDiscord')      ->name('guild.changeDiscord');
     Route::post('/change-discord', 'GuildController@submitChangeDiscord')->name('guild.submitChangeDiscord');
@@ -189,7 +193,7 @@ Route::group([
         Route::get('/',                                      'GuildController@showExports')               ->name('guild.exports');
         Route::get('/addon/{fileType}',                      'ExportController@exportAddonItems')         ->name('guild.export.addonItems')         ->where(['fileType' => '(csv|html)']);
         Route::get('/characters-with-items/{fileType}',      'ExportController@exportCharactersWithItems')->name('guild.export.charactersWithItems')->where(['fileType' => '(html|json)']);
-        Route::post('/gargul', 'ExportController@gargulWishlistJson')                                     ->name('guild.export.gargul');
+        Route::get('/gargul',                               'ExportController@gargul')                    ->name('guild.export.gargul');
         Route::get('/item-notes/{fileType}',                 'ExportController@exportItemNotes')          ->name('guild.export.itemNotes')          ->where(['fileType' => '(csv|html)']);
         Route::get('/loot/{fileType}/{lootType}',            'ExportController@exportGuildLoot')          ->name('guild.export.loot')               ->where(['fileType' => '(csv|html)', 'lootType' => '(all|prio|received|wishlist)']);
         Route::get('/raid-groups/{fileType}/{raidGroupId?}', 'ExportController@exportRaidGroups')         ->name('guild.export.raidGroups')         ->where(['fileType' => '(csv|html)']);

@@ -48,7 +48,7 @@ class MemberController extends Controller
         }
 
         if ($member->id != $currentMember->id && !$currentMember->hasPermission('edit.characters')) {
-            request()->session()->flash('status', __('You don\'t have permissions to edit someone else.'));
+            request()->session()->flash('status', __("You don't have permissions to edit someone else."));
             return redirect()->route('member.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'memberId' => $currentMember->id, 'usernameSlug' => $currentMember->slug]);
         }
 
@@ -122,7 +122,7 @@ class MemberController extends Controller
 
         $currentMember->update(['raid_group_id_filter' => request()->input('raid_group_id')]);
 
-        request()->session()->flash('status', __("Raid Group Filter set."));
+        request()->session()->flash('status', __("Raid Group filter set."));
         return redirect()->back()->withInput(['b' => 1]);
     }
 
@@ -143,18 +143,25 @@ class MemberController extends Controller
         }
 
         $member = Cache::remember($cacheKey, env('CACHE_MEMBER_SECONDS', 5), function () use ($guild, $memberId) {
-            return Member::where(['guild_id' => $guild->id, 'id' => $memberId])
+            $member = Member::where(['guild_id' => $guild->id, 'id' => $memberId])
                 ->with([
-                    ($guild->is_attendance_hidden ? 'characters' : 'charactersWithAttendance'),
-                    ($guild->is_attendance_hidden ? 'characters' : 'charactersWithAttendance') . '.raidGroup',
-                    ($guild->is_attendance_hidden ? 'characters' : 'charactersWithAttendance') . '.raidGroup.role',
-                    ($guild->is_attendance_hidden ? 'characters' : 'charactersWithAttendance') . '.secondaryRaidGroups',
-                    ($guild->is_attendance_hidden ? 'characters' : 'charactersWithAttendance') . '.secondaryRaidGroups.role',
-                    ($guild->is_attendance_hidden ? 'characters' : 'charactersWithAttendance') . '.raids',
-                    ($guild->is_attendance_hidden ? 'characters' : 'charactersWithAttendance') . '.recipes',
+                    'characters',
+                    'characters.raidGroup',
+                    'characters.raidGroup.role',
+                    'characters.secondaryRaidGroups',
+                    'characters.secondaryRaidGroups.role',
+                    'characters.raids',
+                    'characters.recipes',
                     'roles',
                 ])
                 ->first();
+
+            // For optimization, fetch characters with their attendance here and then merge them into
+            // the existing characters for prios and wishlists
+            $charactersWithAttendance = Guild::getAllCharactersWithAttendanceCached($guild);
+            $member->characters = Character::mergeAttendance($member->characters, $charactersWithAttendance);
+
+            return $member;
         });
 
         if (!$member) {
@@ -164,8 +171,9 @@ class MemberController extends Controller
 
         $user = User::where('id', $member->user_id)->first();
 
+        // Merge all recipes from all characters into one list
         $recipes = collect();
-        foreach ($member->charactersWithAttendance as $character) {
+        foreach ($member->characters as $character) {
             foreach ($character->recipes as $recipe) {
                 $recipes->add($recipe);
             }
@@ -196,7 +204,7 @@ class MemberController extends Controller
         }
 
         return view('member.show', [
-            'characters'       => ($guild->is_attendance_hidden ? $member->characters : $member->charactersWithAttendance),
+            'characters'       => $member->characters,
             'currentMember'    => $currentMember,
             'guild'            => $guild,
             'member'           => $member,
@@ -240,11 +248,17 @@ class MemberController extends Controller
 
         $guild->load([
             'allMembers',
-            'allMembers.charactersWithAttendance',
+            'allMembers.characters',
             'allMembers.roles',
             'raidGroups',
             'raidGroups.role',
         ]);
+
+        $charactersWithAttendance = Guild::getAllCharactersWithAttendanceCached($guild);
+
+        foreach ($guild->allMembers as $member) {
+            $member->characters = Character::mergeAttendance($member->characters, $charactersWithAttendance);
+        }
 
         $unassignedCharacters = Character::where([
                 ['guild_id', $guild->id],
@@ -334,16 +348,17 @@ class MemberController extends Controller
         $currentMember = request()->get('currentMember');
 
         $guild->load([
-            'members' => function ($query) {
+            'allMembers' => function ($query) {
                 return $query->where('members.id', request()->input('id'))
                     ->orWhere('members.username', request()->input('username'));
             },
         ]);
 
-        $member = $guild->members->where('id', request()->input('id'))->first();
+        $member = $guild->allMembers->where('id', request()->input('id'))->first();
         $sameNameMember = $guild->members->where('username', request()->input('username'))->first();
 
         if (!$member) {
+            dd('test');
             abort(404, __('Guild member not found.'));
         }
 
@@ -356,7 +371,7 @@ class MemberController extends Controller
 
         $validationRules = [
             'id'                   => 'required|integer|exists:members,id',
-            'username'             => 'nullable|string|min:2|max:32',
+            'username'             => 'required|string|min:2|max:32',
             'public_note'          => 'nullable|string|max:140',
             'officer_note'         => 'nullable|string|max:140',
             'personal_note'        => 'nullable|string|max:2000',
@@ -498,7 +513,7 @@ class MemberController extends Controller
         $member = $guild->members->where('id', request()->input('id'))->first();
 
         if (!$member) {
-            request()->session()->flash('status', 'Member not found.');
+            request()->session()->flash('status', __('Member not found.'));
             return redirect()->route('member.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'memberId' => $currentMember->id, 'usernameSlug' => $currentMember->slug]);
         }
 
@@ -507,7 +522,7 @@ class MemberController extends Controller
         if ($currentMember->hasPermission('edit.officer-notes')) {
             $updateValues['officer_note'] = request()->input('officer_note');
         } else if ($currentMember->id != $member->id && !$currentMember->hasPermission('edit.character')) {
-            request()->session()->flash('status', 'You don\'t have permissions to edit that member.');
+            request()->session()->flash('status', __("You don't have permissions to edit that member."));
             return redirect()->route('member.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'memberId' => $member->id, 'usernameSlug' => $member->slug]);
         }
 
@@ -546,7 +561,7 @@ class MemberController extends Controller
             ]);
         }
 
-        request()->session()->flash('status', __("Successfully updated") . " " . $member->username ."'s " . __("note") . ".");
+        request()->session()->flash('status', __("Successfully updated :memberName's note.", ['memberName' => $member->username]));
         return redirect()->route('member.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'memberId' => $member->id, 'usernameSlug' => $member->slug, 'b' => 1]);
     }
 }

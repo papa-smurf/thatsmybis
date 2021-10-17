@@ -1,16 +1,17 @@
 $(document).ready(function () {
     let initializing = true;
 
-    warnBeforeLeaving("#editForm")
+    warnBeforeLeaving("#editForm");
 
     // Always initialize to null, let the javascript convert from UTC time to local browser time,
     // then it will populate the date.
+    $.datetimepicker.setLocale((locale ? locale : 'en'));
     $(".js-date-input").datetimepicker({
         format: 'Y-m-d H:i:s',
         inline: true,
         step: 30,
         theme: 'dark',
-        value: moment.utc(date).local().format("YYYY-MM-DD HH:mm:ss"),
+        value: date ? moment.utc(date).local().format("YYYY-MM-DD HH:mm:ss") : moment().format("YYYY-MM-DD HH:mm:ss"),
     });
 
     // Trigger a date change to make it convert to UTC and stuff.
@@ -18,7 +19,7 @@ $(document).ready(function () {
 
     $("[name=raid_group_id\\[\\]]").change(function () {
         if (!initializing) {
-            if ($(this).val()) {
+            if ($("[name=add_raiders]").prop("checked") && $(this).val()) {
                 fillCharactersFromRaid($(this).val());
             }
         }
@@ -70,6 +71,9 @@ $(document).ready(function () {
     });
 
     initializing = false;
+    $(".loadingBarContainer").removeClass("d-flex").hide();
+    $("#editForm").show();
+    fixSliderLabels();
 });
 
 // Reset and empty the attendee list.

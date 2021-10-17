@@ -1,5 +1,25 @@
 <?php
 
+/**
+ * https://stackoverflow.com/a/18781630/1196517
+ *
+ * @param array      $array
+ * @param int|string $position
+ * @param mixed      $insert
+ */
+function array_insert(&$array, $position, $insert) {
+    if (is_int($position)) {
+        array_splice($array, $position, 0, $insert);
+    } else {
+        $pos   = array_search($position, array_keys($array));
+        $array = array_merge(
+            array_slice($array, 0, $pos),
+            $insert,
+            array_slice($array, $pos)
+        );
+    }
+}
+
 // Based on attendance percentage, return a CSS color class
 function getAttendanceColor($percentage = 0) {
     $color = '';
@@ -53,14 +73,14 @@ function getExpansionColor($expansionId) {
     }
 }
 
-function getExpansionAbbr($expansionId) {
+function getExpansionAbbr($expansionId, $lowercase = null) {
     switch ($expansionId) {
         case 1:
-            return 'Classic';
+            return $lowercase ? 'classic' : 'Classic';
         case 2:
-            return 'TBC';
+            return $lowercase ? 'tbc' : 'TBC';
         case 3:
-            return 'WoTLK';
+            return $lowercase ? 'wotlk' : 'WoTLK';
         default:
             return '';
     }
@@ -185,13 +205,13 @@ function timeSince ($timestamp) {
     $time = time() - $timestamp; // to get the time since that moment
     $time = ($time < 1) ? 1 : $time;
     $tokens = array (
-        31536000 => 'year',
-        2592000 => 'month',
-        604800 => 'week',
-        86400 => 'day',
-        3600 => 'hour',
-        60 => 'minute',
-        1 => 'second'
+        31536000 => __('year'),
+        2592000 => __('month'),
+        604800 => __('week'),
+        86400 => __('day'),
+        3600 => __('hour'),
+        60 => __('minute'),
+        1 => __('second')
     );
 
     foreach ($tokens as $unit => $text) {
@@ -214,13 +234,13 @@ function timeUntil ($timestamp) {
     $time = $timestamp - time(); // to get the time until that moment
     $time = ($time < 1) ? 1 : $time;
     $tokens = array (
-        31536000 => 'year',
-        2592000 => 'month',
-        604800 => 'week',
-        86400 => 'day',
-        3600 => 'hour',
-        60 => 'minute',
-        1 => 'second'
+        31536000 => __('year'),
+        2592000 => __('month'),
+        604800 => __('week'),
+        86400 => __('day'),
+        3600 => __('hour'),
+        60 => __('minute'),
+        1 => __('second')
     );
 
     foreach ($tokens as $unit => $text) {

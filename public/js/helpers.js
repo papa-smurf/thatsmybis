@@ -11,8 +11,38 @@ const TIERS = {
     6: 'F',
 };
 
+const SLOT_MISC      = 0; // ammo, mount, book, etc
+const SLOT_HEAD      = 1; // head
+const SLOT_NECK      = 2; // neck
+const SLOT_SHOULDERS = 3; // shoulder
+const SLOT_SHIRT     = 4; // shirt
+const SLOT_CHEST_1   = 5; // chest
+const SLOT_WAIST     = 6; // waist
+const SLOT_LEGS      = 7; // legs
+const SLOT_FEET      = 8; // feet
+const SLOT_WRIST     = 9; // wrist
+const SLOT_HANDS     = 10; // hand
+const SLOT_FINGER    = 11; // finger
+const SLOT_TRINKET   = 12; // trinket
+const SLOT_WEAPON_MAIN_HAND = 13; // weapon, 1 hander
+const SLOT_SHIELD           = 14; // shield
+const SLOT_RANGED_1         = 15; // bow
+const SLOT_BACK             = 16; // cloak
+const SLOT_WEAPON_TWO_HAND  = 17; // 2h weapon
+const SLOT_BAG              = 18; // bag, quiver/ammo pouch
+// 19; //// nothing (after my filters, I found nothing in here)
+const SLOT_CHEST_2          = 20; // cloth chest
+const SLOT_WEAPON_ONE_HAND  = 21; // more 1h weapons
+const SLOT_WEAPON_OFF_HAND  = 22; // offhand 1h weapon
+const SLOT_OFFHAND          = 23; // offhand non-weapon
+const SLOT_AMMO             = 24; // ammo
+const SLOT_THROWN           = 25; // thrown
+const SLOT_RANGED_2         = 26; // crossbow, gun, wand
+// 27; //// nothing (after my filters, I found nothing in here)
+const SLOT_RELIC            = 28; // totem/idol/libram
+
 // How often to update timestamps
-var timestampCheckRate = 60000;
+var timestampCheckRate = 30000;
 
 // For keeping track of the intervals updating times
 var timestampUpdateInterval = null;
@@ -29,6 +59,9 @@ marked.setOptions({
     gfm: true,
     breaks: true
 });
+
+// Apply custom configurations to moment.js
+configureMoment();
 
 $(document).ready(function () {
     // Add support for better nav dropdowns
@@ -60,6 +93,9 @@ $(document).ready(function () {
         let id = $(this).data("id");
         $(".js-content[data-id=" + id + "]").toggle();
     });
+
+    // Add mobile friendly tooltips
+    addTooltips();
 });
 
 // Take the visible date input, and convert its time to UTC, update the hidden date input.
@@ -132,12 +168,35 @@ function addSortHandlers() {
     });
 }
 
+// Add mobile friendly tooltips
+function addTooltips() {
+    $("span").tooltip();
+    $("abbr").tooltip();
+    $("a").tooltip();
+}
+
 // Add basic handlers to change the sorting of wishlists
 function addWishlistSortHandlers() {
     $(".js-sort-wishlists").click(function () {
         $(".js-wishlist-unsorted").toggle();
         $(".js-wishlist-sorted").toggle();
     });
+}
+
+// Apply any desired custom configurations to the moment.js library
+function configureMoment() {
+    // Change moment.js thresholds so that it doesn't round seconds, minutes, hours, days, or months.
+    // See: https://momentjs.com/docs/#/customization/relative-time-threshold/
+    moment.relativeTimeThreshold('ss', 40); // Show seconds if >= # seconds; otherwise 'now'
+    moment.relativeTimeThreshold('s', 60); // Show minutes if >= ## seconds
+    moment.relativeTimeThreshold('m', 60); // Show hours if >= ## minutes
+    moment.relativeTimeThreshold('h', 49); // Show days if >= ## hours
+    moment.relativeTimeThreshold('d', 93); // Show months if >= ## days
+    moment.relativeTimeThreshold('M', 25); // Show years if > ## months
+
+    // Round relative time evaluation down
+    // See: http://momentjs.com/docs/#/customization/relative-time-rounding/
+    moment.relativeTimeRounding(Math.floor);
 }
 
 function cleanUrl(sanitize, base, href) {
@@ -213,7 +272,7 @@ function getColorFromDec(color) {
 function getItemTierLabel(item, tierMode) {
     if (item.guild_tier) {
         if (tierMode == TIER_MODE_S) {
-            return TIERS[item.guild_tier];
+            return numToSTier(item.guild_tier);
         } else {
             return item.guild_tier;
         }
@@ -246,6 +305,33 @@ function makeWowheadLinks() {
  */
 function nl2br(string) {
     return string ? string.replace(/\n/g,"<br>") : '';
+}
+
+/**
+ * Expects a float, returns an s-tier with the decimal of the float intact.
+ *
+ * @param $float
+ *
+ * @return array
+ */
+function numToSTier(float) {
+    if (float > 0) {
+        tiers = TIERS;
+
+        whole = Math.floor(float);
+        decimal = float - whole;
+
+        affix = '';
+        if (decimal > 0.66) {
+            affix = '++';
+        } else if (decimal > 0.33) {
+            affix = '+';
+        }
+
+        return tiers[Math.ceil(float)] + affix;
+    } else {
+        return '';
+    }
 }
 
 /**
@@ -400,7 +486,12 @@ function trackTimestamps(rate = timestampCheckRate) {
     $(".js-watchable-timestamp").each(function () {
         let isShort = $(this).data("isShort");
 
-        if (isShort) {
+        if (locale) {
+            moment.locale(locale);
+        }
+
+        // For English short-form dates
+        if (isShort && (!locale || locale === 'en')) {
             moment
             .locale('en', {
                 relativeTime: {

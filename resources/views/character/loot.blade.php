@@ -159,7 +159,7 @@
                                 @endif
                             @else
                                 <div class="{{ $errors->has('wishlist.*') ? 'has-error' : '' }}">
-                                    <input id="wishlist" maxlength="40" data-max-length="40" type="text" placeholder="type an item name" class="js-item-autocomplete js-input-text form-control dark">
+                                    <input id="wishlist" maxlength="40" data-max-length="40" type="text" placeholder="{{ __('type an item name') }}" class="js-item-autocomplete js-input-text form-control dark">
                                     <span class="js-loading-indicator" style="display:none;">{{ __("Searching...") }}</span>&nbsp;
 
                                     <ul class="js-sortable-lazy no-bullet no-indent mb-0 bg-light">
@@ -196,7 +196,7 @@
                                                     </div>
                                                 </div>
 
-                                                <div class="js-input-label">
+                                                <div class="js-input-label mr-2" style="flex-grow: 1;">
                                                     <span class="js-item-display">
                                                         @includeWhen($itemId, 'partials/item', [
                                                             'wowheadLink'   => false,
@@ -278,7 +278,7 @@
                             @endif
                         @else
                             <div class="{{ $errors->has('received.*') ? 'has-error' : '' }}">
-                                <input id="received" maxlength="40" data-max-length="40" type="text" placeholder="type an item name" class="js-item-autocomplete js-input-text form-control dark">
+                                <input id="received" maxlength="40" data-max-length="40" type="text" placeholder="{{ __('type an item name') }}" class="js-item-autocomplete js-input-text form-control dark">
                                 <span class="js-loading-indicator" style="display:none;">{{ __("Searching...") }}</span>&nbsp;
 
                                 <ul class="js-sortable-lazy no-bullet no-indent mb-0 bg-light">
@@ -359,7 +359,7 @@
                         </label>
 
                         <div class="{{ $errors->has('recipes.*') ? 'has-error' : '' }}">
-                            <input id="recipes" maxlength="40" data-max-length="40" type="text" placeholder="type an item name" class="js-item-autocomplete js-input-text form-control dark">
+                            <input id="recipes" maxlength="40" data-max-length="40" type="text" placeholder="{{ __('type an item name') }}" class="js-item-autocomplete js-input-text form-control dark">
                             <span class="js-loading-indicator" style="display:none;">{{ __("Searching...") }}</span>&nbsp;
 
                             <ul class="js-sortable no-bullet no-indent mb-0">
@@ -431,7 +431,7 @@
                                 {{ __("Public Note") }}
                                 <small class="text-muted">{{ __("anyone in the guild can see this") }}</small>
                             </label>
-                            <textarea maxlength="140" data-max-length="140" name="public_note" rows="2" placeholder="anyone in the guild can see this" class="form-control dark">{{ old('public_note') ? old('public_note') : ($character ? $character->public_note : '') }}</textarea>
+                            <textarea maxlength="140" data-max-length="140" name="public_note" rows="2" placeholder="{{ __('anyone in the guild can see this') }}" class="form-control dark">{{ old('public_note') ? old('public_note') : ($character ? $character->public_note : '') }}</textarea>
                         </div>
                     </div>
 
@@ -443,7 +443,7 @@
                                     {{ __("Officer Note") }}
                                     <small class="text-muted">{{ __("only officers can see this") }}</small>
                                 </label>
-                                <textarea maxlength="140" data-max-length="140" name="officer_note" rows="2" placeholder="only officers can see this" class="form-control dark">{{ old('officer_note') ? old('officer_note') : ($character ? $character->officer_note : '') }}</textarea>
+                                <textarea maxlength="140" data-max-length="140" name="officer_note" rows="2" placeholder="{{ __('only officers can see this') }}" class="form-control dark">{{ old('officer_note') ? old('officer_note') : ($character ? $character->officer_note : '') }}</textarea>
                             </div>
                         </div>
                     @endif
@@ -456,7 +456,7 @@
                                     {{ __("Personal Note") }}
                                     <small class="text-muted">{{ __("only you can see this") }}</small>
                                 </label>
-                                <textarea maxlength="2000" data-max-length="2000" name="personal_note" rows="2" placeholder="only you can see this" class="form-control dark">{{ old('personal_note') ? old('personal_note') : ($character ? $character->personal_note : '') }}</textarea>
+                                <textarea maxlength="2000" data-max-length="2000" name="personal_note" rows="2" placeholder="{{ __('only you can see this') }}" class="form-control dark">{{ old('personal_note') ? old('personal_note') : ($character ? $character->personal_note : '') }}</textarea>
                             </div>
                         </div>
                     --}}
@@ -478,6 +478,18 @@
     $(document).ready(function () {
         warnBeforeLeaving("#itemForm");
         addSortHandlers();
+
+        // Show/hide note input
+        $(".js-toggle-note").change(function () {
+            const index = $(this).data('index');
+            const type = $(this).data('type');
+
+            if ($(this).prop("checked")) {
+                $(".js-note[data-index=" + index + "][data-type=" + type + "]").parent().show();
+            } else {
+                $(".js-note[data-index=" + index + "][data-type=" + type + "]").parent().hide();
+            }
+        });
     });
 </script>
 @endsection

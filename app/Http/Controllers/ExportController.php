@@ -173,54 +173,71 @@ class ExportController extends Controller {
     /**
      * Export a guild's wishlist and loot data for the Gargul addon
      *
-     * @return Response
+     * @return Response|View
      * @throws Exception
      */
-    public function gargulWishlistJson()
+    public function gargul()
     {
         $this->validate(request(), [
             'gargul_wishlist' => 'array|max:' . CharacterLootController::MAX_WISHLIST_LISTS,
             'gargul_wishlist.*' => 'integer|min:1|max:' . CharacterLootController::MAX_WISHLIST_LISTS,
+            'raw' => 'boolean|nullable',
         ]);
 
+        $raw = request()->get('raw');
         $guild = request()->get('guild');
         $currentMember = request()->get('currentMember');
-        $viewPrioPermission = $currentMember->hasPermission('view.prios');
+        $memberCanViewPrios = !$guild->is_prio_private || $currentMember->hasPermission('view.prios');
+        $memberCanViewWishlists = !$guild->is_wishlist_private || $currentMember->hasPermission('view.wishlists');
+
+        // The current user doesn't have any of the required permissions so we only return the item notes.
+        // Individual permissions are inspected separately further down.
+        if (!$memberCanViewPrios && !$memberCanViewWishlists) {
+            $payload = array_merge(['wishlists' => []], $this->gargulItemNotes($guild->id));
+            return $this->getExport(
+                json_encode($payload, JSON_UNESCAPED_UNICODE),
+                'Gargul data',
+                self::HTML
+            );
+        }
+
         $listNumbers = request()->input('gargul_wishlist') ?: [$guild->current_wishlist_number];
 
         $characters = $guild->characters()
             ->has('outstandingItems')
             ->with([
+                'raidGroup' => function ($query) {
+                    $query->select('id', 'name');
+                },
                 'outstandingItems' => function ($query) use ($guild, $listNumbers) {
-                    return $query
-                        ->whereIn('list_number', $listNumbers)
-                        ->orWhere(function($query) {
-                            $query->where('type', 'prio')
-                                ->where('is_received', 0);
-                        })
-                        ->select('character_id', 'item_id', 'type', 'order', 'is_offspec');
-                }
+                    return $query->where(function($query) use ($guild, $listNumbers) {
+                        return $query
+                            ->whereIn('list_number', $listNumbers)
+                            ->orWhere(function ($query) {
+                                $query->where('type', 'prio')
+                                    ->where('is_received', 0);
+                            })
+                            ->select('character_id', 'item_id', 'type', 'order', 'is_offspec');
+                    });
+                },
             ])
-            ->select('id', 'name', 'personal_order_modifier', 'attendance_order_modifier')
+            ->select('id', 'raid_group_id', 'name', 'personal_order_modifier', 'attendance_order_modifier')
             ->get();
 
         $wishlistData = [];
+        $raidGroupData = [];
         foreach ($characters as $character) {
             foreach ($character->outstandingItems as $item) {
-                $order = $item->order;
-
-                // If the current member is not allowed to see item character
-                // priorities then the order will be replaced with a question mark
-                if ($item->type === Item::TYPE_PRIO
-                    && $guild->is_prio_private
-                    && !$viewPrioPermission
+                // The current member is not allowed to see the order of this item
+                if (($item->type === Item::TYPE_PRIO && !$memberCanViewPrios)
+                    || ($item->type === Item::TYPE_WISHLIST && !$memberCanViewWishlists)
                 ) {
                     $order = '?';
                 } else {
                     $order = $item->order + $character->personal_order_modifier - $character->attendance_order_modifier;
                 }
 
-                $itemId = $item->item->item_id;
+                $itemId = $item->item_id;
                 $characterName = mb_strtolower($character->name);
 
                 if (!isset($wishlistData[$itemId])) {
@@ -228,45 +245,82 @@ class ExportController extends Controller {
                 }
 
                 $wishlistData[$itemId][] = sprintf(
-                    '%s%s|%s|%s',
+                    '%s%s|%s|%s|%s',
                     $characterName,
                     $item->is_offspec ? '(OS)' : '',
                     $order,
                     $item->type === Item::TYPE_PRIO ? 1 : 2,
+                    $character->raid_group_id ?: 0,
                 );
+
+                if ($character->raid_group_id) {
+                    $raidGroupData[$character->raid_group_id] = $character->raidGroup->name;
+                }
             }
         }
 
+        $payload = array_merge([
+            'wishlists' => $wishlistData,
+            'groups' => $raidGroupData,
+        ], $this->gargulItemNotes($guild->id));
+        $payload = json_encode($payload, JSON_UNESCAPED_UNICODE);
+
+        if (!$raw) {
+            return view('guild.export.gargul', [
+                'currentMember' => $currentMember,
+                'data' => base64_encode(gzcompress($payload, 9)),
+                'guild' => $guild,
+                'name' => 'Gargul data',
+                'maxWishlistLists' => CharacterLootController::MAX_WISHLIST_LISTS,
+                'showNotes' => true,
+            ]);
+        }
+
         return $this->getExport(
-            json_encode([
-                'wishlists' => $wishlistData,
-                'loot' => $this->gargulLootPriorityCSV($guild->id),
-            ],
-                JSON_UNESCAPED_UNICODE
-            ),
+            $payload,
             'Gargul data',
             self::HTML
         );
     }
 
     /**
-     * Export a guild's loot priority data for the Gargul addon
+     * Export a guild's loot notes for the Gargul addon
      *
-     * @return string
+     * The reason why 'loot' is a CSV instead of JSON is because Gargul already
+     * supported CSV loot priority strings before becoming compatible with TMB
+     *
+     * @param int $guildId
+     * @return array
      */
-    protected function gargulLootPriorityCSV($guildId)
+    private function gargulItemNotes(int $guildId): array
     {
-        $items = GuildItem::whereNotNull('priority')
+        $items = GuildItem::where(function ($query) {
+                $query->whereNotNull('priority')
+                    ->orWhereNotNull('note');
+            })
             ->where('guild_id', $guildId)
-            ->select('item_id', 'priority')
+            ->select('item_id', 'priority', 'note')
             ->get();
 
+        $notes = [];
         $itemPriorityString = "";
         foreach ($items as $item) {
-            $itemPriorityString .= "{$item->item_id} > {$item->priority}\n";
-        };
+            $priority = trim($item->priority);
+            $note = trim($item->note);
 
-        return $itemPriorityString;
+            if ($priority) {
+                $itemPriorityString .= "{$item->item_id} > {$priority}\n";
+            }
+
+            if ($note) {
+                $notes[$item->item_id] = $note;
+            }
+        }
+
+        return [
+            'loot' => $itemPriorityString,
+            'notes' => $notes,
+        ];
     }
 
     /**
@@ -384,12 +438,12 @@ class ExportController extends Controller {
         }
 
         if ($lootType == Item::TYPE_WISHLIST && !$showWishlist) {
-            request()->session()->flash('status', 'You don\'t have permissions to view wishlists.');
+            request()->session()->flash('status', __("You don't have permissions to view wishlists."));
             return redirect()->route('guild.home', ['guildId' => $guild->id, 'guildSlug' => $guildSlug]);
         }
 
         if ($lootType == Item::TYPE_PRIO && !$showPrios) {
-            request()->session()->flash('status', 'You don\'t have permissions to view prios.');
+            request()->session()->flash('status', __("You don't have permissions to view prios."));
             return redirect()->route('guild.home', ['guildId' => $guild->id, 'guildSlug' => $guildSlug]);
         }
 
@@ -547,7 +601,7 @@ class ExportController extends Controller {
      * @var string $title
      * @var string $fileType 'csv' or 'html'
      *
-     * @var array  $csv      The data.
+     * @var array|string  $csv      The data.
      */
     private function getExport($csv, $title, $fileType) {
         if ($fileType == self::CSV) {

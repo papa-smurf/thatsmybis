@@ -95,6 +95,13 @@ function createTable() {
     rosterTable = $("#characterTable").DataTable({
         autoWidth : false,
         data      : characters,
+        // To disable fuzzy search:
+        // search: {
+        //     smart: false
+        // },
+        oLanguage: {
+            sSearch: "<abbr title='Fuzzy searching is ON. To search exact text, wrap your search in \"quotes\"'>Search</abbr>"
+        },
         columns   : [
             {
                 title  : `<span class="fas fa-fw fa-user"></span> ${headerCharacter} <span class="text-muted small">(${characters.length})</span>`,
@@ -143,9 +150,10 @@ function createTable() {
                         ${ !guild.is_attendance_hidden && (row.attendance_percentage || row.raid_count || row.benched_count) ?
                             `<li>
                                 <ul class="list-inline">
-                                ${ row.raid_count && typeof row.attendance_percentage === 'number' ? `<li class="list-inline-item ${ getAttendanceColor(row.attendance_percentage) }" title="attendance">${ Math.round(row.attendance_percentage * 100) }%</li>` : '' }
-                                ${ row.raid_count ? `<li class="list-inline-item small text-muted">${ row.raid_count } raid${ row.raid_count > 1 ? 's' : '' }</li>` : ``}
-                                ${ row.benched_count ? `<li class="list-inline-item small text-muted">benched ${ row.benched_count }x</li>` : ``}
+                                    ${ row.raid_count && typeof row.attendance_percentage === 'number' ? `<li class="list-inline-item ${ getAttendanceColor(row.attendance_percentage) }" title="attendance">${ Math.round(row.attendance_percentage * 100) }%</li>` : '' }
+                                    ${ row.raid_count ? `<li class="list-inline-item small text-muted">${ row.raid_count }r</li>` : ``}
+                                    ${ row.benched_count ? `<li class="list-inline-item small text-muted">benched ${ row.benched_count }x</li>` : ``}
+                                </ul>
                             </li>` : `` }
 
                         ${ row.level || row.race || row.spec ? `
@@ -600,6 +608,7 @@ function getItemListHtml(data, type, characterId, useOrder = false, showInstance
                     data-title="added by ${ item.added_by_username } at"
                     data-is-short="1">
                 </span>
+                ${ item.pivot.note ? `<span class="smaller text-muted text-underline" title="${ item.pivot.note }">note</span>` : '' }
             </li>`;
     });
 
@@ -667,6 +676,8 @@ function callRosterHandlers() {
         } else {
             resetItemVisibility();
         }
+
+        addTooltips();
     }, 500); // 0.5s delay
 }
 

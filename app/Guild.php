@@ -15,6 +15,9 @@ use App\{
     User,
 };
 
+use \Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
+
 class Guild extends BaseModel
 {
     /**
@@ -98,7 +101,7 @@ class Guild extends BaseModel
     }
 
     public function allCharactersWithAttendance() {
-        return Character::addAttendanceQuery($this->allCharacters())->groupBy('characters.id');
+        return Character::addAttendanceQuery($this->allCharacters(), $this->id);
     }
 
     // Includes banned and inactive members
@@ -124,7 +127,7 @@ class Guild extends BaseModel
     // Gets characters and their attendance stats
     // Excludes hidden and removed characters
     public function charactersWithAttendance() {
-        return Character::addAttendanceQuery($this->characters())->groupBy('characters.id');
+        return Character::addAttendanceQuery($this->characters(), $this->id);
     }
 
     public function content() {
@@ -187,6 +190,25 @@ class Guild extends BaseModel
         return $this->wishlist_names ? explode('|', $this->wishlist_names) : null;
     }
 
+    // For fetching cached characters with attendance
+    public static function getAllCharactersWithAttendanceCached($guild) {
+        $cacheKey = 'guild:' . $guild->id . 'charactersWithAttendance';
+
+        // Create a different cache key if the user is using a raid group filter for attendance
+        $raidGroupIdFilter = request()->get('raidGroupIdFilter');
+        if ($raidGroupIdFilter) {
+            $cacheKey .= ':raidGroup:' . $raidGroupIdFilter;
+        }
+
+        if (request()->get('bustCache')) {
+            Cache::forget($cacheKey);
+        }
+
+        return Cache::remember($cacheKey, env('CACHE_GUILD_ATTENDANCE_CHARACTERS_SECONDS', 60), function () use ($guild) {
+            return $guild->allCharactersWithAttendance()->get();
+        });
+    }
+
     /**
      * SHORT AND SIMPLE NAME IS SHORT AND SIMPLE.
      * Returns all of the characters and all the stuff associated with them.
@@ -222,6 +244,7 @@ class Guild extends BaseModel
             'characters.inactive_at',
             'members.username',
             'users.discord_username',
+            'users.discord_id',
             'members.is_wishlist_unlocked',
             'members.is_received_unlocked',
             'raid_groups.name AS raid_group_name',
@@ -248,7 +271,7 @@ class Guild extends BaseModel
             ->where('characters.guild_id', $this->id)
             ->orderBy('characters.name')
             ->with([
-                'received', // TODO: Optimize (is slow)
+                'received',
                 'secondaryRaidGroups' => function ($query) {
                     return $query
                         ->select([
@@ -262,7 +285,7 @@ class Guild extends BaseModel
                     },
                 ]);
 
-        $query = Character::addAttendanceQuery($query)->groupBy('characters.id');
+        $query = Character::addAttendanceQuery($query, $this->id);
 
         if (!$showInactive) {
             $query = $query->whereNull('characters.inactive_at');
@@ -270,7 +293,7 @@ class Guild extends BaseModel
 
         if ($showPrios) {
             if ($this->prio_show_count && !$viewPrioPermission) {
-                $query = $query->with(['prios' => function ($query) { // TODO: Optimize (is slow)
+                $query = $query->with(['prios' => function ($query) {
                     return $query->where([
                         ['character_items.order', '<=', $this->prio_show_count],
                     ]);
@@ -283,9 +306,9 @@ class Guild extends BaseModel
         if ($showWishlist) {
             if ($allWishlists) {
                 // NOTE that this will output the relation 'allWishlists' and NOT 'wishlist'
-                $query = $query->with('allWishlists'); // TODO: Optimize (is slow)
+                $query = $query->with('allWishlists');
             } else {
-                $query = $query->with('wishlist'); // TODO: Optimize (is slow)
+                $query = $query->with('wishlist');
             }
         }
 
@@ -320,6 +343,25 @@ class Guild extends BaseModel
         } else {
             return 60;
         }
+    }
+
+    /**
+     * Returns non-archived characters, plus characters passed in.
+     * Useful for existing resources that don't want to drop any archived characters already associated.
+     */
+    public function getSelectableCharacters($mandatoryCharacters) {
+        $allCharacters = Character::mergeAttendance($this->allCharacters()->get(), Guild::getAllCharactersWithAttendanceCached($this));
+
+        $whitelistCharacterIds = null;
+
+        if ($mandatoryCharacters && $mandatoryCharacters instanceof Collection) {
+            $whitelistCharacterIds = $mandatoryCharacters->keyBy('id')->keys()->toArray();
+        }
+
+        return $allCharacters->filter(function ($character, $key) use ($whitelistCharacterIds) {
+            // Character ID exists in raid's list of characters OR character is NOT archived
+            return !$character->inactive_at || ($whitelistCharacterIds && in_array($character->id, $whitelistCharacterIds));
+        });
     }
 
     public static function tiers() {
