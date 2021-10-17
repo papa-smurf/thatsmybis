@@ -20,6 +20,7 @@ class CalculateAttendanceOrderModifier extends Command
     public function handle()
     {
         $raids = Raid::with('characters')
+            ->whereHas('characters')
             ->orderBy('date', 'DESC')
             ->limit(self::RAIDS_THAT_COUNT)
             ->get();
