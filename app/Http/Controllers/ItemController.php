@@ -100,18 +100,13 @@ class ItemController extends Controller
                 ])
                 // ->whereNull('items.parent_id')
                 ->orderBy('item_sources.order')
-                ->orderBy('items.name');
+                ->orderBy('items.name')
+                ->ofFaction($guild->faction);
 
             if ($showPrios) {
                 $query = $query->with([
                     'priodCharacters' => function ($query) use ($guild, $characterFields, $viewPrioPermission) {
-                        if ($guild->prio_show_count && !$viewPrioPermission) {
-                            $query = $query->where([
-                                ['character_items.order', '<=', $guild->prio_show_count],
-                            ]);
-                        }
-
-                        $query = $query
+                        return $query
                             ->addSelect($characterFields)
                             ->leftJoin('members', function ($join) {
                                 $join->on('members.id', 'characters.member_id');
@@ -123,6 +118,7 @@ class ItemController extends Controller
                                 ['characters.guild_id', $guild->id],
                                 ['character_items.is_received', 0],
                             ])
+                            ->whereIn('character_items.raid_group_id', $guild->raidGroups->pluck('id'))
                             ->whereNull('character_items.received_at')
                             ->groupBy(['character_items.character_id', 'character_items.item_id']);
                     }
@@ -151,23 +147,27 @@ class ItemController extends Controller
 
                     },
                     'childItems' => function ($query) use ($guild) {
-                        return $query->with([
-                            'wishlistCharacters' => function ($query) use($guild) {
-                                return $query
-                                    ->where([
-                                        ['characters.guild_id', $guild->id],
-                                        ['character_items.is_received', 0],
-                                    ])
-                                ->whereNull('character_items.received_at')
-                                ->groupBy(['character_items.character_id', 'character_items.item_id', 'character_items.list_number'])
-                                ->orderBy('raid_group_name')
-                                ->orderBy('character_items.order');
-                            },
-                        ]);
+                        return $query
+                            ->ofFaction($guild->faction)
+                            ->with([
+                                'wishlistCharacters' => function ($query) use($guild) {
+                                    return $query
+                                        ->where([
+                                            ['characters.guild_id', $guild->id],
+                                            ['character_items.is_received', 0],
+                                        ])
+                                    ->whereNull('character_items.received_at')
+                                    ->groupBy(['character_items.character_id', 'character_items.item_id', 'character_items.list_number'])
+                                    ->orderBy('raid_group_name')
+                                    ->orderBy('character_items.order');
+                                },
+                            ]);
                     }
                 ]);
             } else {
-                $query = $query->with(['childItems']);
+                $query = $query->with('childItems', function ($query) use ($guild) {
+                    return $query->ofFaction($guild->faction);
+                });
             }
 
             $query = $query->with([
@@ -177,6 +177,13 @@ class ItemController extends Controller
                 ]);
 
             $items = $query->get();
+
+            if ($guild->prio_show_count && !$viewPrioPermission) {
+                $items->map(function ($item) use ($guild) {
+                    $item = $this->filterItemPriodCharactersByGuildLimit($item, $guild);
+                    return $item;
+                });
+            }
 
             if ($showWishlist) {
                 $items = $this->mergeTokenWishlists($items, $guild);
@@ -279,14 +286,9 @@ class ItemController extends Controller
             if ($showPrios) {
                 $query = $query->with([
                     'priodCharacters' => function ($query) use ($guild, $viewPrioPermission) {
-                        if ($guild->prio_show_count && !$viewPrioPermission) {
-                            $query = $query->where([
-                                ['character_items.order', '<=', $guild->prio_show_count],
-                            ]);
-                        }
-
                         return $query
                             ->where(['characters.guild_id' => $guild->id])
+                            ->whereIn('character_items.raid_group_id', $guild->raidGroups->pluck('id'))
                             ->groupBy(['character_items.character_id', 'character_items.raid_group_id']);
                     },
                 ]);
@@ -296,7 +298,8 @@ class ItemController extends Controller
                 $query = $this->addWishlistQuery($query, $guild, $viewPrioPermission);
                 $query = $query->with([
                     'childItems' => function ($query) use ($guild, $viewPrioPermission) {
-                        return $this->addWishlistQuery($query, $guild, $viewPrioPermission);
+                        $query = $this->addWishlistQuery($query, $guild, $viewPrioPermission);
+                        return $query->ofFaction($guild->faction);
                     }
                 ]);
             } else {
@@ -312,12 +315,23 @@ class ItemController extends Controller
 
             $items = $query->get();
 
+            if ($showPrios && $guild->prio_show_count && !$viewPrioPermission) {
+                $items->map(function ($item) use ($guild) {
+                    $item = $this->filterItemPriodCharactersByGuildLimit($item, $guild);
+                    return $item;
+                });
+            }
+
             if ($showWishlist) {
                 $items = $this->mergeTokenWishlists($items, $guild);
             }
 
             return $items->first();
         });
+
+        if (!$item) {
+            abort(404, __('Item not found.'));
+        }
 
         $itemSlug = slug($item->name);
 
@@ -331,15 +345,15 @@ class ItemController extends Controller
         }
 
         $notes = [];
-        $notes['note']       = null;
-        $notes['priority']   = null;
-        $notes['tier']       = null;
+        $notes['note']     = null;
+        $notes['priority'] = null;
+        $notes['tier']     = null;
 
         // If this guild has notes for this item, prep them for ease of access in the view
         if ($item->guilds->count() > 0) {
-            $notes['note']       = $item->guilds->first()->note;
-            $notes['priority']   = $item->guilds->first()->priority;
-            $notes['tier']       = $item->guilds->first()->tier;
+            $notes['note']     = $item->guilds->first()->note;
+            $notes['priority'] = $item->guilds->first()->priority;
+            $notes['tier']     = $item->guilds->first()->tier;
         }
 
         $showEdit = false;
@@ -373,6 +387,20 @@ class ItemController extends Controller
             if (!$guild->is_attendance_hidden && $wishlistCharacters) {
                 $charactersWithAttendance = Guild::getAllCharactersWithAttendanceCached($guild);
                 $wishlistCharacters = Character::mergeAttendance($wishlistCharacters, $charactersWithAttendance);
+            }
+        }
+
+        if ($wishlistCharacters) {
+            foreach ($wishlistCharacters as $character) {
+                $wish = $character->allWishlists->where('item_id', $item->item_id)->first();
+                if ($wish) {
+                    $wish = $wish->pivot;
+                    $character->roster_note_list_number = $wish->list_number;
+                    $character->roster_note_order       = $wish->order;
+                    $character->roster_note_is_offspec  = $wish->is_offspec;
+                    $character->roster_note             = $wish->note;
+                    $character->roster_note_date        = $wish->created_at;
+                }
             }
         }
 
@@ -495,5 +523,48 @@ class ItemController extends Controller
             }
         }
         return $items;
+    }
+
+    /**
+     * Based on the number of prios to show in the guild settings; filter related
+     * prio'd characters to not exceed that limit; per raid group.
+     *
+     * @return Item $item The item with a filtered priod character list.
+     */
+    private function filterItemPriodCharactersByGuildLimit(Item $item, Guild $guild): Item
+    {
+        if ($item->priodCharacters->count() > 0) {
+            // Return $guild->prio_show_count items per raid group
+            $prioCountPerRaidGroup = [];
+            $prioCountPerRaidGroup[0] = 0;
+            foreach ($guild->raidGroups as $raidGroup) {
+                $prioCountPerRaidGroup[$raidGroup->id] = 0;
+            }
+
+            $filteredPriodCharacters = $item->priodCharacters->filter(
+                function ($priodCharacter) use ($guild, &$prioCountPerRaidGroup) {
+                    $count = null;
+                    if ($priodCharacter->pivot->raid_group_id) {
+                        if (array_key_exists($priodCharacter->pivot->raid_group_id, $prioCountPerRaidGroup)) {
+                            $prioCountPerRaidGroup[$priodCharacter->pivot->raid_group_id] = $prioCountPerRaidGroup[$priodCharacter->pivot->raid_group_id] + 1;
+                            $count = $prioCountPerRaidGroup[$priodCharacter->pivot->raid_group_id];
+                        } else {
+                            // Raid group doesn't exist or is archived; don't show item
+                            return false;
+                        }
+                    } else {
+                        $prioCountPerRaidGroup[0] = $prioCountPerRaidGroup[0] + 1;
+                        $count = $prioCountPerRaidGroup[0];
+                    }
+                    if ($count <= $guild->prio_show_count) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                });
+
+            $item->setRelation('priodCharacters', $filteredPriodCharacters->values());
+        }
+        return $item;
     }
 }

@@ -173,10 +173,11 @@
                     </li>
                     @if ($showPrios)
                         <li class="list-inline-item bg-lightest rounded p-3 mt-3 align-top">
-                            @if (!$item->parent_id && $item->itemSources->count())
+                            @if ($item->itemSources->count())
                                 <ul class="list-inline">
                                     <li class="list-inline-item">
                                         <h2 class="font-weight-bold mb-3">
+                                            <span class="fas fa-fw fa-sort-amount-down text-gold"></span>
                                             {{ __("Character Prios") }}
                                         </h2>
                                     </li>
@@ -228,7 +229,7 @@
                                                     value="{{ $character->pivot->order }}">
                                                     <a href="{{ route('character.show', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'characterId' => $character->id, 'nameSlug' => $character->slug]) }}"
                                                         title="{{ $character->raid_group_name ? $character->raid_group_name . ' -' : '' }} {{ $character->level ? $character->level : '' }} {{ $character->race ? $character->race : '' }} {{ $character->spec ? $character->spec : '' }} {{ $character->class ? $character->class : '' }} {{ $character->username ? '(' . $character->username . ')' : '' }}"
-                                                        class="text-{{ $character->class ? strtolower($character->class) : ''}}-important tag d-inline">
+                                                        class="text-{{ $character->class ? slug($character->class) : ''}}-important tag d-inline">
                                                         <span class="role-circle" style="background-color:{{ getHexColorFromDec(($character->raid_group_color ? $character->raid_group_color : '')) }}"></span>{{ $character->name }}
                                                         @if ($character->is_alt)
                                                             <span class="text-gold">{{ __("alt") }}</span>
@@ -271,6 +272,7 @@
                                 <li class="">
                                     <h2 class="font-weight-bold mb-3">
                                         {{ __("Related") }}
+                                        <span class="font-weight-normal smaller text-muted">{{ $item->childItems->count() }}</span>
                                     </h2>
                                 </li>
                                 @if ($item->parentItem)
@@ -377,7 +379,12 @@
 @section('scripts')
 <script>
     @php
-        $itemNames = [$item->name];
+        // Warglaives have a custom display string added...
+        $itemName = $item->name;
+        $itemName = str_replace(' (offhand)', '', $itemName);
+        $itemName = str_replace(' (mainhand)', '', $itemName);
+
+        $itemNames = [$itemName];
         foreach ($item->childItems as $childItem) {
             $itemNames[] = $childItem->name;
         }

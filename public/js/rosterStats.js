@@ -226,8 +226,8 @@ function createRosterStatsTable() {
                 _: function (data, type, row) {
                     return `<ul class="no-bullet no-indent">
                         <li>
-                            <div class="dropdown text-${ row.class ? row.class.toLowerCase() : '' }">
-                                <a class="dropdown-toggle font-weight-bold text-${ row.class ? row.class.toLowerCase() : '' }"
+                            <div class="dropdown text-${ row.class ? slug(row.class) : '' }">
+                                <a class="dropdown-toggle font-weight-bold text-${ row.class ? slug(row.class) : '' }"
                                     id="character${ row.id }Dropdown"
                                     role="button"
                                     data-toggle="dropdown"
@@ -248,8 +248,16 @@ function createRosterStatsTable() {
                                     : `` }
                                 </div>
                             </div>
-                            ${ getRaidGroupHtml(row.raid_group_name, row.raid_group_color) }
                         </li>
+                        ${ row.spec || row.display_spec || row.archetype
+                            ? `<li class="small font-weight-light">
+                                <span class="${ row.archetype ?  getArchetypeIcon(row.archetype) : '' }"></span>
+                                <span class="">
+                                    ${ row.spec_label ? row.spec_label : (row.spec ? row.display_spec : '') }
+                                </span>
+                            </li>`
+                            : `` }
+                        ${ row.raid_group_name ? `<li>${ getRaidGroupHtml(row.raid_group_name, row.raid_group_color) }</li>` : `` }
                     </ul>`;
                 },
                 // Sort by the value in data; not the render
@@ -264,9 +272,7 @@ function createRosterStatsTable() {
             title  : "Role",
             data   : "character",
             render : function (data, type, row) {
-                return `<span class="small text-${ row.class ? row.class.toLowerCase() : '' }">${row.display_archetype ? row.display_archetype : ''}</span>
-                    <br>
-                    <span class="small text-${ row.class ? row.class.toLowerCase() : '' }">${row.display_spec ? row.display_spec : ''}</span>`;
+                return `${row.archetype ? row.archetype : ''} ${row.sub_archetype ? row.sub_archetype : ''}`;
             },
             visible : true,
             width   : "20px",
@@ -443,7 +449,31 @@ function createRosterStatsTable() {
             createInstanceColumn("Other",        null, isVisible)
         );
     } else if (guild && guild.expansion_id === 3) { // WoTLK
-        // Implement closer to WoTLK release, or when pserver people put some work in...
+        createInstanceColumn("Naxx N10", 19, isVisible),
+        createInstanceColumn("Naxx N25", 20, isVisible),
+        createInstanceColumn("EoE N10",  21, isVisible),
+        createInstanceColumn("EoE N25",  22, isVisible),
+        createInstanceColumn("OS N10",   23, isVisible),
+        createInstanceColumn("OS N25",   24, isVisible),
+        createInstanceColumn("Arch N10", 25, isVisible),
+        createInstanceColumn("Arch N25", 26, isVisible),
+        createInstanceColumn("Uld N10",  27, isVisible),
+        createInstanceColumn("Uld N25",  28, isVisible),
+        createInstanceColumn("TotC N10", 29, isVisible),
+        createInstanceColumn("TotC N25", 30, isVisible),
+        createInstanceColumn("TotC H10", 31, isVisible),
+        createInstanceColumn("TotC H25", 32, isVisible),
+        createInstanceColumn("Ony N10",  33, isVisible),
+        createInstanceColumn("Ony N25",  34, isVisible),
+        createInstanceColumn("ICC N10",  35, isVisible),
+        createInstanceColumn("ICC N25",  36, isVisible),
+        createInstanceColumn("ICC H10",  37, isVisible),
+        createInstanceColumn("ICC H25",  38, isVisible),
+        createInstanceColumn("RS N10",   39, isVisible),
+        createInstanceColumn("RS N25",   40, isVisible),
+        createInstanceColumn("RS H10",   41, isVisible),
+        createInstanceColumn("RS H25",   42, isVisible),
+        createInstanceColumn("Other",    null, isVisible)
     }
 
     rosterStatsTable = $("#characterStatsTable").DataTable({
@@ -481,11 +511,11 @@ function createRosterStatsTable() {
                 let select2 = null; // Initialize this beside select1 if we want a secondary sort for the same column
 
                 // Based on the current column, identify the relevant filter input
-                if (index == colClass) {
-                    select1 = $("#class_filter");
-                    select2 = null;
-                } else if (index == colArchetype) {
+                if (index == colArchetype) {
                     select1 = $("#archetype_filter");
+                    select2 = null;
+                } else if (index == colClass) {
+                    select1 = $("#class_filter");
                     select2 = null;
                 } else if (index == colMainRaidGroup) {
                     select1 = $("#raid_group_filter");
@@ -812,8 +842,8 @@ function getNotes(data, type, row) {
 // Just a simple pretty printout of the raid group's name and color
 function getRaidGroupHtml(name, color) {
     if (name) {
-        return `<span class="small font-weight-normal d-inline">
-            <span class="role-circle" style="background-color:${ getColorFromDec(parseInt(color)) }"></span>
+        return `<span class="small font-weight-light d-inline">
+            <span class="role-circle-small" style="background-color:${ getColorFromDec(parseInt(color)) }"></span>
                 ${ name }
             </span>`;
     } else {

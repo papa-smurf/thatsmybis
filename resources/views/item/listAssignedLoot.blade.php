@@ -8,7 +8,7 @@
             <div class="row">
                 <div class="col-12 pt-2 mb-2">
                     <h1 class="font-weight-medium">
-                        <span class="fas fa-fw fa-gift text-gold"></span>
+                        <span class="fas fa-fw fa-history text-gold"></span>
                         {{ __("Assigned Loot") }}
                     </h1>
                 </div>
@@ -101,7 +101,7 @@
                             </option>
                             @foreach ($guild->characters as $character)
                                 <option value="{{ $character->id }}"
-                                        data-tokens="{{ $character->id }}" class="text-{{ strtolower($character->class) }}-important"
+                                        data-tokens="{{ $character->id }}" class="text-{{ slug($character->class) }}-important"
                                         {{ Request::get('character_id') && Request::get('character_id') == $character->id ? 'selected' : ''}}>
                                     {{ $character->name }} &nbsp; {{ $character->class ? '(' . $character->class . ')' : '' }} &nbsp; {{ $character->is_alt ? __("Alt") : '' }}
                                 </option>

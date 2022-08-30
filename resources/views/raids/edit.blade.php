@@ -46,7 +46,7 @@
                                         {{ $copy ? $originalRaid->name : $raid->name }}
                                     </a>
                                 @else
-                                    <span class="text-muted fas fa-fw fa-plus"></span>
+                                    <span class="text-muted fas fa-fw fa-calendar-plus"></span>
                                     {{ __("Create a Raid") }}
                                 @endif
                             </h1>
@@ -134,6 +134,18 @@
                                         class="form-control dark"
                                         placeholder="{{ __('eg. MC Binding Run 42') }}"
                                         value="{{ old('name') ? old('name') : ($raid ? $raid->name : '') }}" />
+                                </div>
+                            </div>
+
+                            <div class="col-12 {{ $errors->has('raid.ignore_attendance') ? 'text-danger font-weight-bold' : '' }}">
+                                <div class="form-group mt-2">
+                                    <div class="checkbox text-warning">
+                                        <label>
+                                            <input type="checkbox" name="ignore_attendance" value="1" class="" autocomplete="off"
+                                                {{ old('ignore_attendance') && old('ignore_attendance') == 1 ? 'checked' : ($raid && $raid->ignore_attendance ? 'checked' : '') }}>
+                                                {{ __("Ignore attendance") }} <small class="text-muted">{{ __("attendance will not count") }}</small>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
@@ -237,7 +249,7 @@
                                                 <span class="fas fa-fw fa-file-import"></span>
                                                 {{ __("Import Characters from Warcraft Logs") }}
                                             </span>
-                                            <div class="js-warcraftlogs-attendees-message text-warning" style="display:none;">
+                                            <div class="js-warcraftlogs-attendees-message text-warning mt-2" style="display:none;">
                                             </div>
                                             @include('partials/loadingBars', ['loadingBarId' => 'warcraftlogsLoadingbar'])
                                         @else
@@ -494,6 +506,7 @@
                                                         @if ($i == 0)
                                                             <span class="fas fa-fw fa-user-chart text-muted"></span>
                                                             {{ __("Attendance Credit") }}
+                                                            <span id="editAttendance" class="fas fa-fw fa-pencil text-link cursor-pointer" title="{{ __('Enable granular control') }}"></span>
                                                         @else
                                                             <span class="sr-only">
                                                                 {{ __("Attendance Credit") }}
@@ -606,6 +619,13 @@
     var characters = {!! $showOfficerNote ? $guild->characters->makeVisible('officer_note')->toJson() : $guild->characters->toJson() !!};
     var date  = '{{ $date }}';
     var guild = {!! $guild->toJson() !!};
+
+    $(document).ready(function () {
+        $("#editAttendance").click(function () {
+            $("input[name^=characters][name$=\\[credit\\]]").toggle();
+        });
+    });
 </script>
+<script src="{{ loadScript('warcraftlogs.js') }}"></script>
 <script src="{{ loadScript('raidEdit.js') }}"></script>
 @endsection

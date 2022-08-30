@@ -127,6 +127,10 @@ body {
     background-color: #161523 !important;
 }
 
+.bg-navbar {
+    background-color: #1b1a37;
+}
+
 .bg-expansion- {
     background: #fff;
 }
@@ -196,6 +200,19 @@ body {
     color: #68ccef;
 }
 
+.text-horde {
+    color: #dc3545;
+}
+.text-alliance {
+    color: #007bff;
+}
+.text-horde-important {
+    color: #dc3545 !important;
+}
+.text-alliance-important {
+    color: #007bff !important;
+}
+
 .text-death-knight {
     color: #c41e3b;
 }
@@ -230,8 +247,14 @@ body {
     color: #bb9b63;
 }
 
+.text-death-knight-important {
+    color: #c41e3b !important;
+}
 .text-druid-important {
     color: #ff8000 !important;
+}
+.text-dk-important {
+    color: #c41e3b !important;
 }
 .text-hunter-important {
     color: #9dd367 !important;
@@ -257,6 +280,26 @@ body {
 .text-warrior-important {
     color: #bb9b63 !important;
 }
+
+.text-dps, .text-caster, .text-physical {
+    color: #dc3545;
+}
+.text-healer {
+    color: #28a745;
+}
+.text-tank {
+    color: #007bff;
+}
+.text-dps-important, .text-caster-important, .text-physical-important {
+    color: #dc3545 !important;
+}
+.text-heal-important {
+    color: #28a745 !important;
+}
+.text-tank-important {
+    color: #007bff !important;
+}
+
 
 .text-link {
     color: #0080ff;
@@ -693,6 +736,10 @@ input.slim {
     border-radius: 14px;
     background-color: #2f2e4e;
 }
+.tag.tag-wrap {
+    width: inherit;
+    white-space: inherit;
+}
 
 .bg-tag {
     background-color: #252344;
@@ -735,6 +782,10 @@ input.slim {
 }
 
 .js-markdown img {
+    max-width: 100%;
+}
+
+.max-100 {
     max-width: 100%;
 }
 
@@ -1145,3 +1196,30 @@ div.dataTables_filter input {
     /* add padding to account for vertical scrollbar */
     /*padding-right: 20px;*/
 }
+
+/* BEGIN ADS */
+.d-poster-970 {
+    display: none;
+}
+@media (min-width: 992px) {
+    .d-poster-970 {
+        display: block !important;
+    }
+}
+.d-poster-728 {
+    display: none;
+}
+@media (min-width: 747px) { /* and (max-width: 991px) */
+    .d-poster-728 {
+        display: block !important;
+    }
+}
+.d-poster-320 {
+    display: none;
+}
+@media (min-width: 320px) { /* and (max-width: 746px) */
+    .d-poster-320 {
+        display: block !important;
+    }
+}
+/* END ADS */

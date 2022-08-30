@@ -1,3 +1,21 @@
+@php
+    $showAds = true;
+    if (request()->get('hideAds')
+        || in_array(Route::currentRouteName(), [
+            'home',
+            'faq',
+            'privacy',
+            'caliPrivacy',
+            'terms',
+            'donate',
+            'login',
+            'register',
+        ])
+    ) {
+        $showAds = false;
+    }
+@endphp
+
 <!DOCTYPE html>
 <html lang="{{ config('app.locale') }}" prefix="og: http://ogp.me/ns#">
 <head>
@@ -65,7 +83,7 @@
     <!-- datetime picker; native datetimepicker is not supported in all browsers -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.min.css" integrity="sha512-f0tzWhCwVFS3WeYaofoLWkTP62ObhewQ1EZn65oSYDZUg1+CyywGKkWzm8BxaJj5HGKI72PnMH9jYyIFz+GH7g==" crossorigin="anonymous" />
 
-    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.13.1/css/all.css" integrity="sha384-B9BoFFAuBaCfqw6lxWBZrhg/z4NkwqdBci+E+Sc2XlK/Rz25RYn8Fetb+Aw5irxa" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.15.4/css/all.css" integrity="sha384-rqn26AG5Pj86AF4SO72RK5fyefcQ/x32DNQfChxWvbXIyXFePlEktwD18fEz+kQU" crossorigin="anonymous">
 
     <link rel="stylesheet" type="text/css" href="{{ loadScript('main.css', 'css') }}">
 
@@ -86,9 +104,13 @@
         instructions how to enable JavaScript in your web browser</a>.
     </noscript>
 
-    <!-- ads. -->
-    <!-- original email <script data-ad-client="ca-pub-2856743447375289" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script> -->
+    <!-- AdSense -->
     <script data-ad-client="ca-pub-8209165373319221" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <!-- Ads -->
+    <script>
+    window.nitroAds=window.nitroAds||{createAd:function(){window.nitroAds.queue.push(["createAd",arguments])},addUserToken:function(){window.nitroAds.queue.push(["addUserToken",arguments])},queue:[]};
+    </script>
+    <script async src="https://s.nitropay.com/ads-921.js"></script>
 </head>
 <body class="@yield('bodyClass')">
     @include('layouts/nav')
@@ -195,8 +217,19 @@
         </div>
     @endif
 
+    @if ($showAds)
+        <div class="d-poster-970 mb-4" id="top-large-leaderboard-poster"></div>
+        <div class="d-poster-728 mb-4" id="top-leaderboard-poster"></div>
+        <div class="d-poster-320 mb-4" id="top-mobile-banner-poster"></div>
+    @endif
 
     @yield('content')
+
+    @if ($showAds)
+        <div class="d-poster-970" id="bottom-large-billboard-poster"></div>
+        <div class="d-poster-728" id="bottom-leaderboard-poster"></div>
+        <div class="d-poster-320" id="bottom-mobile-banner-poster"></div>
+    @endif
 
     @if (!isset($noFooter))
         @yield('footer')
@@ -325,6 +358,138 @@
 
     <script src="{{ loadScript('helpers.js') }}"></script>
     <script src="{{ loadScript('autocomplete.js') }}"></script>
+
+    <script>
+        <!-- NitroPay GDPR preferences https://docs.nitropay.com/en/articles/3623674-creating-a-link-to-open-gdpr-preferences -->
+        if (document.getElementById("consent-box")) {
+            if (window["nitroAds"] && window["nitroAds"].loaded) {
+                document.getElementById("consent-box").style.display = (window["__tcfapi"] ? "" : "none");
+            } else {
+                document.addEventListener(
+                    "nitroAds.loaded",
+                    () => document.getElementById("consent-box").style.display = (window["__tcfapi"] ? "" : "none")
+                );
+            }
+        }
+        window['nitroAds'].createAd('video-poster', {
+            "demo": {{ env('EXAMPLE_ADS', 'false') }},
+            "format": "video-ac"
+        });
+        window['nitroAds'].createAd('top-large-leaderboard-poster', {
+            "demo": {{ env('EXAMPLE_ADS', 'false') }},
+            "refreshLimit": 10,
+            "refreshTime": 30,
+            "renderVisibleOnly": true,
+            "refreshVisibleOnly": true,
+            "sizes": [
+                [
+                    "970",
+                    "90"
+                ]
+            ],
+            "report": {
+                "enabled": true,
+                "wording": "Report Ad",
+                "position": "bottom-right"
+            },
+            "mediaQuery": "(min-width: 1000px) and (max-width: 99999px)"
+        });
+        window['nitroAds'].createAd('bottom-large-billboard-poster', {
+            "demo": {{ env('EXAMPLE_ADS', 'false') }},
+            "refreshLimit": 10,
+            "refreshTime": 30,
+            "renderVisibleOnly": true,
+            "refreshVisibleOnly": true,
+            "sizes": [
+                [
+                    "970",
+                    "250"
+                ]
+            ],
+            "report": {
+                "enabled": true,
+                "wording": "Report Ad",
+                "position": "bottom-right"
+            },
+            "mediaQuery": "(min-width: 1000px) and (max-width: 99999px)"
+        });
+        window['nitroAds'].createAd('top-leaderboard-poster', {
+            "demo": {{ env('EXAMPLE_ADS', 'false') }},
+            "refreshLimit": 10,
+            "refreshTime": 30,
+            "renderVisibleOnly": true,
+            "refreshVisibleOnly": true,
+            "sizes": [
+                [
+                    "728",
+                    "90"
+                ]
+            ],
+            "report": {
+                "enabled": true,
+                "wording": "Report Ad",
+                "position": "bottom-right"
+            },
+            "mediaQuery": "(min-width: 768px) and (max-width: 999px)"
+        });
+        window['nitroAds'].createAd('bottom-leaderboard-poster', {
+            "demo": {{ env('EXAMPLE_ADS', 'false') }},
+            "refreshLimit": 10,
+            "refreshTime": 30,
+            "renderVisibleOnly": true,
+            "refreshVisibleOnly": true,
+            "sizes": [
+                [
+                    "728",
+                    "90"
+                ]
+            ],
+            "report": {
+                "enabled": true,
+                "wording": "Report Ad",
+                "position": "bottom-right"
+            },
+            "mediaQuery": "(min-width: 768px) and (max-width: 999px)"
+        });
+        window['nitroAds'].createAd('top-mobile-banner-poster', {
+            "demo": {{ env('EXAMPLE_ADS', 'false') }},
+            "refreshLimit": 10,
+            "refreshTime": 30,
+            "renderVisibleOnly": true,
+            "refreshVisibleOnly": true,
+            "sizes": [
+                [
+                    "320",
+                    "50"
+                ]
+            ],
+            "report": {
+                "enabled": true,
+                "wording": "Report Ad",
+                "position": "bottom-right"
+            },
+            "mediaQuery": "(min-width: 320px) and (max-width: 767px)"
+        });
+        window['nitroAds'].createAd('bottom-mobile-banner-poster', {
+            "demo": {{ env('EXAMPLE_ADS', 'false') }},
+            "refreshLimit": 10,
+            "refreshTime": 30,
+            "renderVisibleOnly": true,
+            "refreshVisibleOnly": true,
+            "sizes": [
+                [
+                    "320",
+                    "50"
+                ]
+            ],
+            "report": {
+                "enabled": true,
+                "wording": "Report Ad",
+                "position": "bottom-right"
+            },
+            "mediaQuery": "(min-width: 320px) and (max-width: 767px)"
+        });
+    </script>
 
     @yield('scripts')
 </body>

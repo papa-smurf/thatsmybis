@@ -381,6 +381,8 @@ class ExportController extends Controller {
             $expansionId = 1;
         } else if ($expansionSlug == 'burning-crusade') {
             $expansionId = 2;
+        } else {
+            abort(404, __('Expansion not found'));
         }
 
         $subdomain = 'www';
@@ -657,6 +659,7 @@ class ExportController extends Controller {
         }
 
         if ($guild->prio_show_count && !$viewPrioPermission) {
+            // NOTE: This does not respect the prio LIMIT and instead only shows the top two regardless of what is received.
             $lootTypeFragment .= " ((type = 'prio' AND ci.`order` <= {$guild->prio_show_count}) OR (type != 'prio')) AND";
         }
 

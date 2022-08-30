@@ -20,6 +20,18 @@ function array_insert(&$array, $position, $insert) {
     }
 }
 
+function getArchetypeIcon($archetype) {
+    if ($archetype === App\Character::ARCHETYPE_DPS) {
+        return 'fas fa-fw fa-bow-arrow text-dps';
+    } else if ($archetype === App\Character::ARCHETYPE_HEAL) {
+        return 'fas fa-fw fa-plus-circle text-healer';
+    } else if ($archetype === App\Character::ARCHETYPE_TANK) {
+        return 'fas fa-fw fa-shield text-tank';
+    } else {
+        return 'fas fa-fw fa-map-marker-question text-muted';
+    }
+}
+
 // Based on attendance percentage, return a CSS color class
 function getAttendanceColor($percentage = 0) {
     $color = '';
@@ -174,17 +186,15 @@ function splitByLine($string) {
 function numToSTier($float) {
     if ($float > 0) {
         $tiers = App\Guild::tiers();
-
         $whole = floor($float);
         $decimal = $float - $whole;
-
         $affix = '';
-        if ($decimal > 0.66) {
-            $affix = '++';
-        } else if ($decimal > 0.33) {
+        // Comparing floats is icky: https://www.php.net/manual/en/language.types.float.php#language.types.float.comparison
+        if ($decimal >= 0.599) {
             $affix = '+';
+        } else if ($decimal >= 0.299) {
+            $affix = '++';
         }
-
         return $tiers[ceil($float)] . $affix;
     } else {
         return '';

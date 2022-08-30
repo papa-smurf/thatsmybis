@@ -16,6 +16,7 @@ class Item extends BaseModel
      */
     protected $fillable = [
         'expansion_id',
+        'faction',
         'parent_id',
         'parent_item_id',
         'name',
@@ -268,5 +269,22 @@ class Item extends BaseModel
                 'raid_id',
                 'created_at',
             ]);
+    }
+
+    /**
+     * Scope a query to only include items of a given faction.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder $query
+     * @param  string $faction (see factions as defined in Guild)
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeOfFaction($query, $faction)
+    {
+        if ($faction) {
+            return $query->where('faction', $faction)
+                ->orWhereNull('faction');
+        } else {
+            return $query;
+        }
     }
 }

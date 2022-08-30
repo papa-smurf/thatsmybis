@@ -11,6 +11,15 @@
             <h2 class="">
                 {!! __('Welcome, <span class="text-discord font-weight-bold">:username</span>', ['username' => Auth::user()->discord_username]) !!}
             </h2>
+            @if (Auth::user()->ads_disabled_at)
+                <p class="text-uncommon text-4 text-center">
+                    {{ __('Ads are disabled for your account. Thank you for supporting!') }}
+                </p>
+            @else
+                <p>
+                    {!! __('TMB is made by a solo dev<br>Donations help cover costs <a href=":donateLink" class="text-patreon">Donate on Patreon</a><br>or consider disabling adblock. Thanks! <3', ['donateLink' => route('donate')]) !!}
+                </p>
+            @endif
             {!! __("<strong>Change log</strong> and <strong>announcements</strong> are on the") !!}
             <a href="{{ env('APP_DISCORD') }}"
                 target="_blank"
@@ -19,8 +28,6 @@
                 class="">
                 {{ __("Discord") }}
             </a>
-            <br>
-            {!! __('Like the site? <a href=":donateLink" class="text-patreon"> Support the developer</a> directly to help make it better.', ['donateLink' => route('donate')]) !!}
         </div>
 
         <div class="col-12 col-sm-6 offset-sm-3 col-md-4 offset-md-4 mt-3">
@@ -59,7 +66,7 @@
                                     @foreach ($member->characters as $character)
                                         <li class="list-inline-item bg-tag rounded pt-0 pl-1 pb-1 pr-1">
                                             <a href="{{route('character.show', ['guildId' => $member->guild->id, 'guildSlug' => $member->guild->slug, 'characterId' => $character->id, 'nameSlug' => $character->slug]) }}"
-                                                class="text-{{ $character->class ? strtolower($character->class) : '' }}">
+                                                class="text-{{ $character->class ? slug($character->class) : '' }}">
                                                 {{ $character->name }}
                                             </a>
                                         </li>

@@ -31,6 +31,7 @@ class Guild extends BaseModel
         'user_id',
         'discord_id',
         'expansion_id',
+        'faction',
         'warcraftlogs_token',
         'warcraftlogs_refresh_token',
         'warcraftlogs_token_expiry',
@@ -97,6 +98,9 @@ class Guild extends BaseModel
         5 => 'D',
         6 => 'F',
     ];
+
+    const FACTION_BEST  = 'h';
+    const FACTION_WORST = 'a';
 
     // Includes hidden and removed characters
     public function allCharacters() {
@@ -181,6 +185,15 @@ class Guild extends BaseModel
         return $this->belongsTo(User::class);
     }
 
+    /* Various functions */
+
+    static public function factions() {
+        return [
+            self::FACTION_BEST  => self::FACTION_BEST,
+            self::FACTION_WORST => self::FACTION_WORST,
+        ];
+    }
+
     public function getMemberRoleIds() {
         if ($this->member_role_ids) {
             return explode(',', $this->member_role_ids);
@@ -251,6 +264,7 @@ class Guild extends BaseModel
             'characters.public_note',
             'characters.inactive_at',
             'members.username',
+            'members.slug AS member_slug',
             'users.discord_username',
             'users.discord_id',
             'members.is_wishlist_unlocked',

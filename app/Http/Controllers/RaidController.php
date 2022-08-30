@@ -65,8 +65,9 @@ class RaidController extends Controller
         $createValues['slug']         = slug(request()->input('name'));
         $createValues['guild_id']     = $guild->id;
         $createValues['member_id']    = $currentMember->id;
+        $createValues['ignore_attendance'] = (request()->input('ignore_attendance') == "1" ? true : false);;
         $createValues['cancelled_at'] = null;
-        $createValues['archived_at'] = null;
+        $createValues['archived_at']  = null;
 
         $raid = Raid::create($createValues);
 
@@ -192,6 +193,7 @@ class RaidController extends Controller
             $originalRaid = clone $raid;
             $raid->id     = null;
             $raid->name   = $raid->name . ' Copy';
+            $raid->ignore_attendance = 0;
             $raid->cancelled_at    = null;
             $raid->archived_at     = null;
             $raid->logs_deprecated = null;
@@ -266,6 +268,13 @@ class RaidController extends Controller
             $query = $query->whereNotNull('raids.archived_at');
         } else {
             $query = $query->whereNull('raids.archived_at');
+        }
+
+        if (!empty(request()->input('min_date'))) {
+            $query = $query->where('raids.date', '>',  request()->input('min_date'));
+        }
+        if (!empty(request()->input('max_date'))) {
+            $query = $query->where('raids.date', '<',  request()->input('max_date'));
         }
 
         if (!empty(request()->input('character_id'))) {
@@ -445,6 +454,7 @@ class RaidController extends Controller
         $updateValues['logs_deprecated'] = request()->input('logs_deprecated');
 
         $updateValues['slug']         = slug(request()->input('name'));
+        $updateValues['ignore_attendance'] = request()->input('ignore_attendance') && request()->input('ignore_attendance') == 1 ? ($raid->ignore_attendance ? $raid->ignore_attendance : 1) : 0;
         $updateValues['cancelled_at'] = request()->input('is_cancelled') && request()->input('is_cancelled') == 1 ? ($raid->cancelled_at ? $raid->cancelled_at : getDateTime()) : null;
         $updateValues['archived_at'] = request()->input('is_archived') && request()->input('is_archived') == 1 ? ($raid->is_archived ? $raid->is_archived : getDateTime()) : null;
 
@@ -454,6 +464,10 @@ class RaidController extends Controller
 
         if ($updateValues['name'] != $raid->name) {
             $auditMessage .= ' (renamed to ' . $updateValues['name'] . ')';
+        }
+
+        if ($updateValues['ignore_attendance'] != $raid->ignore_attendance) {
+            $auditMessage .= $updateValues['ignore_attendance'] ? ' (attendance ignored)' : ' (attendance counted)';
         }
 
         if ($updateValues['cancelled_at'] != $raid->cancelled_at) {

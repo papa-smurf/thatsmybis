@@ -46,7 +46,7 @@
                 @endforeach
             </select>
         </li>
-        <li class=" list-inline-item">
+        <li class="list-inline-item">
             <label for="class_filter" class="font-weight-light">
                 <span class="text-muted fas fa-fw fa-axe-battle"></span>
                 {{ __("Class") }}
@@ -61,9 +61,24 @@
             </select>
         </li>
         <li class="list-inline-item">
+            <label for="archetype_filter" class="font-weight-light">
+                <span class="text-muted fas fa-fw fa-chess"></span>
+                {{ __("Role") }}
+            </label>
+            <select id="archetype_filter" class="form-control dark selectpicker">
+                <option value="">—</option>
+                @foreach (App\Character::extendedArchetypes() as $key => $role)
+                    <option value="{{ $key }}" class="text-{{ strtolower($key) }}-important font-weight-medium">
+                        {{ $role }}
+                    </option>
+                @endforeach
+            </select>
+        </li>
+        <li class="list-inline-item">
             <label for="instance_filter" class="font-weight-light">
                 <span class="text-muted fas fa-fw fa-sack"></span>
                 {{ __("Item Filter") }}
+                <abbr title="{{ __(' currently only works when you have loot revealed (click "Show all loot")') }}">?</abbr>
             </label>
             <select id="instance_filter"
                 multiple
@@ -110,11 +125,11 @@
                     <option value="12">
                         {{ __("Serpentshrine Cavern") }}
                     </option>
-                    <option value="13">
-                        {{ __("Hyjal Summit") }}
-                    </option>
                     <option value="14">
                         {{ __("Tempest Keep") }}
+                    </option>
+                    <option value="13">
+                        {{ __("Hyjal Summit") }}
                     </option>
                     <option value="15">
                         {{ __("Black Temple") }}
@@ -127,6 +142,79 @@
                     </option>
                     <option value="18">
                         {{ __("World Bosses") }}
+                    </option>
+                @elseif ($guild->expansion_id == 3)
+                    <option value="19">
+                        {{ __("Naxxramas N10") }}
+                    </option>
+                    <option value="20">
+                        {{ __("Naxxramas N25") }}
+                    </option>
+                    <option value="21">
+                        {{ __("Eye of Eternity N10") }}
+                    </option>
+                    <option value="22">
+                        {{ __("Eye of Eternity N25") }}
+                    </option>
+                    <option value="23">
+                        {{ __("Obsidian Sanctum N10") }}
+                    </option>
+                    <option value="24">
+                        {{ __("Obsidian Sanctum N25") }}
+                    </option>
+                    <option value="25">
+                        {{ __("Vault of Archavon N10") }}
+                    </option>
+                    <option value="26">
+                        {{ __("Vault of Archavon N25") }}
+                    </option>
+                    <option value="27">
+                        {{ __("Ulduar N10") }}
+                    </option>
+                    <option value="28">
+                        {{ __("Ulduar N25") }}
+                    </option>
+                    <option value="29">
+                        {{ __("Trial of the Crusader N10") }}
+                    </option>
+                    <option value="30">
+                        {{ __("Trial of the Crusader N25") }}
+                    </option>
+                    <option value="31">
+                        {{ __("Trial of the Crusader H10") }}
+                    </option>
+                    <option value="32">
+                        {{ __("Trial of the Crusader H25") }}
+                    </option>
+                    <option value="33">
+                        {{ __("Onyxia's Lair N10") }}
+                    </option>
+                    <option value="34">
+                        {{ __("Onyxia's Lair N25") }}
+                    </option>
+                    <option value="35">
+                        {{ __("Icecrown Citadel N10") }}
+                    </option>
+                    <option value="36">
+                        {{ __("Icecrown Citadel N25") }}
+                    </option>
+                    <option value="37">
+                        {{ __("Icecrown Citadel H10") }}
+                    </option>
+                    <option value="38">
+                        {{ __("Icecrown Citadel H25") }}
+                    </option>
+                    <option value="39">
+                        {{ __("Ruby Sanctum N10") }}
+                    </option>
+                    <option value="40">
+                        {{ __("Ruby Sanctum N25") }}
+                    </option>
+                    <option value="41">
+                        {{ __("Ruby Sanctum H10") }}
+                    </option>
+                    <option value="42">
+                        {{ __("Ruby Sanctum H25") }}
                     </option>
                 @endif
             </select>

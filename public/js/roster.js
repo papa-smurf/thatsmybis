@@ -10,6 +10,8 @@ var colNotes     = 6;
 var colClass     = 7;
 var colRaidGroup = 8;
 var colRaidsAttended = 11;
+var colBenchedCount = 12
+var colArchetype = 13;
 
 var allItemsVisible = false;
 var strikethroughVisible = true;
@@ -61,23 +63,11 @@ $(document).ready( function () {
     });
 
     $(".js-hide-strikethrough-items").click(function() {
-        if (strikethroughVisible) {
-            strikethroughVisible = false;
-            hideStrikethroughItems();
-        } else {
-            strikethroughVisible = true;
-            showStrikethroughItems();
-        }
+        toggleStrikethroughItems();
     });
 
     $(".js-hide-offspec-items").click(function() {
-        if (offspecVisible) {
-            offspecVisible = false;
-            hideOffspecItems();
-        } else {
-            offspecVisible = true;
-            showOffspecItems();
-        }
+        toggleOffspecItems();
     });
 
     // Dungeon multiselect could get stuck if clicked too soon
@@ -85,6 +75,13 @@ $(document).ready( function () {
 
     $(".loadingBarContainer").removeClass("d-flex").hide();
     $("#characterDatatable").show();
+
+    $("#raid_group_filter").change(function () {
+        setCookie('raidGroupFilter', $("#raid_group_filter").val());
+    });
+
+    // Update filter to whatever raid grou was last selected.
+    $("#raid_group_filter").val(getCookie('raidGroupFilter')).change();
 
     addInstanceFilterHandlers();
     addWishlistFilterHandlers();
@@ -105,82 +102,121 @@ function createTable() {
         columns   : [
             {
                 title  : `<span class="fas fa-fw fa-user"></span> ${headerCharacter} <span class="text-muted small">(${characters.length})</span>`,
-                data   : "character",
-                render : function (data, type, row) {
-                    return `
-                    <ul class="no-bullet no-indent mb-2">
-                        <li>
-                            <div class="dropdown text-${ row.class ? row.class.toLowerCase() : '' }">
-                                <a class="dropdown-toggle text-4 font-weight-bold text-${ row.class ? row.class.toLowerCase() : '' }"
-                                    id="character${ row.id }Dropdown"
-                                    role="button"
-                                    data-toggle="dropdown"
-                                    aria-haspopup="true"
-                                    aria-expanded="false"
-                                    title="${ row.username ? row.username : '' }">
-                                    ${ row.name }
-                                </a>
-                                <div class="dropdown-menu" aria-labelledby="character${ row.id }Dropdown">
-                                    <a class="dropdown-item" href="/${ guild.id }/${ guild.slug }/c/${ row.id }/${ row.slug }">Profile</a>
-                                    <a class="dropdown-item" href="/${ guild.id }/${ guild.slug }/audit-log?character_id=${ row.id }">History</a>
-                                    ${ showEdit ?
-                                        `<a class="dropdown-item" href="/${ guild.id }/${ guild.slug }/c/${ row.id }/${ row.slug }/edit">Edit</a>
-                                        <a class="dropdown-item" href="/${ guild.id }/${ guild.slug }/c/${ row.id }/${ row.slug }/loot">Wishlist & Loot</a>`
+                data   : "name",
+                render : {
+                    _: function (data, type, row) {
+                        return `
+                        <ul class="no-bullet no-indent mb-2">
+                            <li>
+                                <div class="dropdown text-${ row.class ? slug(row.class) : '' }">
+                                    ${
+                                        row.roster_note_order || row.roster_note_list_number || row.roster_note_is_offspec || row.roster_note_date || row.roster_note
+                                            ? `<ul class="list-inline tag tag-wrap bg-dark text-muted">
+                                                ${ row.roster_note_order
+                                                    ? `<li class="list-inline-item font-weight-bold text-legendary">#${ row.roster_note_order }</li>`
+                                                    : ``
+                                                }
+                                                ${ row.roster_note_list_number
+                                                    ? `<li class="list-inline-item small"><span class="">Wishlist </span> ${ row.roster_note_list_number }</li>`
+                                                    : ``
+                                                }
+                                                ${ row.roster_note_is_offspec
+                                                    ? `<li class="list-inline-item small">OS</li>`
+                                                    : ``
+                                                }
+                                                ${ row.roster_note_date
+                                                    ? `<li class="list-inline-item smaller"><span class="js-watchable-timestamp js-timestamp-title"
+                                                            data-timestamp="${ row.roster_note_date }"
+                                                            data-title="added at"
+                                                            data-is-short="1">
+                                                        </span></li>`
+                                                    : `` }
+                                                ${ row.roster_note
+                                                    ? `<li class="small"><span class="font-weight-bold">Note:</span> ${ row.roster_note }</li>`
+                                                    : ``
+                                                }
+                                                </ul>`
+                                            : ``
+                                    }
+                                    <a class="dropdown-toggle text-4 font-weight-bold text-${ row.class ? slug(row.class) : '' }"
+                                        id="character${ row.id }Dropdown"
+                                        role="button"
+                                        data-toggle="dropdown"
+                                        aria-haspopup="true"
+                                        aria-expanded="false"
+                                        title="${ row.username ? row.username : '' }">
+                                        ${ row.name }
+                                    </a>
+                                    <div class="dropdown-menu" aria-labelledby="character${ row.id }Dropdown">
+                                        <a class="dropdown-item" href="/${ guild.id }/${ guild.slug }/c/${ row.id }/${ row.slug }"><span class="fas fa-fw fa-user text-muted"></span> Profile</a>
+                                        <a class="dropdown-item" href="/${ guild.id }/${ guild.slug }/audit-log?character_id=${ row.id }"><span class="fas fa-fw fa-clipboard-list-check text-muted"></span> History</a>
+                                        ${ showEdit ?
+                                            `<a class="dropdown-item" href="/${ guild.id }/${ guild.slug }/c/${ row.id }/${ row.slug }/edit"><span class="fas fa-fw fa-pencil text-muted"></span> Edit</a>
+                                            <a class="dropdown-item" href="/${ guild.id }/${ guild.slug }/c/${ row.id }/${ row.slug }/loot"><span class="fas fa-fw fa-sack text-muted"></span> Wishlist & Loot</a>`
+                                            : `` }
+                                        ${ row.member_id ?
+                                            `<a class="dropdown-item" href="/${ guild.id }/${ guild.slug }/u/${ row.member_id }/${ row.member_slug ? row.member_slug.toLowerCase() : 'view member' }"><span class="fas fa-fw fa-user text-muted"></span> ${ row.username ? row.username : 'view member' }</a>`
                                         : `` }
-                                    ${ row.member_id ?
-                                        `<a class="dropdown-item" href="/${ guild.id }/${ guild.slug }/u/${ row.member_id }/${ row.username ? row.username.toLowerCase() : 'view member' }">${ row.username ? row.username : 'view member' }</a>`
-                                    : `` }
+                                    </div>
                                 </div>
-                            </div>
-                        </li>
-                        ${ row.is_alt || row.raid_group_name || row.class ? `
-                            <li>
-                                ${ row.is_alt ? `
-                                    <span class="text-warning font-weight-bold">${localeAlt}</span>&nbsp;
-                                ` : '' }
-                                ${ row.raid_group_name ? `
-                                    <span class="font-weight-bold d-inline tag">
-                                        <span class="role-circle" style="background-color:${ getColorFromDec(parseInt(row.raid_group_color)) }"></span>
-                                        ${ row.raid_group_name ? row.raid_group_name : '' }
-                                    </span>&nbsp;
-                                ` : ``}
-                                ${ row.class ? row.class : '' }
-                            </li>` : `` }
+                            </li>
 
-                        ${ !guild.is_attendance_hidden && (row.attendance_percentage || row.raid_count || row.benched_count) ?
-                            `<li>
-                                <ul class="list-inline">
-                                    ${ row.raid_count && typeof row.attendance_percentage === 'number' ? `<li class="list-inline-item ${ getAttendanceColor(row.attendance_percentage) }" title="attendance">${ Math.round(row.attendance_percentage * 100) }%</li>` : '' }
-                                    ${ row.raid_count ? `<li class="list-inline-item small text-muted">${ row.raid_count }r</li>` : ``}
-                                    ${ row.benched_count ? `<li class="list-inline-item small text-muted">benched ${ row.benched_count }x</li>` : ``}
-                                </ul>
-                            </li>` : `` }
+                            ${ row.spec || row.display_spec || row.archetype || row.race
+                                ? `<li>
+                                    <ul class="small list-inline">
+                                        <li class="list-inline-item">
+                                            <span class="${ row.archetype ?  getArchetypeIcon(row.archetype) : '' }"></span>
+                                            <!--${ row.level ? row.level : '' }-->
+                                            <span class="font-weight-normal">
+                                                ${ row.spec_label ? row.spec_label : (row.spec ? row.display_spec : '') }
+                                            </span>
+                                        </li>
+                                        ${ row.race  ? `<li class="list-inline-item text-muted">${row.display_race}</li>` : '' }
+                                        <!--${ row.class ? row.display_class : '' }-->
+                                    </ul>
+                                </li>`
+                                : `` }
 
-                        ${ row.level || row.race || row.spec ? `
-                            <li>
-                                <span class="small text-muted">
-                                    ${ row.level ? row.level : '' }
-                                    <span class="font-weight-bold">
-                                        ${ row.race  ? row.race : '' }
-                                        ${ row.spec_label ? row.spec_label : (row.spec ? row.spec : '') }
+                            ${ row.rank || row.profession_1 || row.profession_2 ? `
+                                <li>
+                                    <span class="small text-muted">
+                                        ${ row.rank         ? 'Rank ' + row.rank + (row.profession_1 || row.profession_2 ? ',' : '') : '' }
+                                        ${ row.profession_1 ? row.display_profession1 + (row.profession_2 ? ',' : '') : '' }
+                                        ${ row.profession_2 ? row.display_profession2 : '' }
                                     </span>
-                                </span>
-                            </li>` : `` }
+                                </li>` : `` }
 
-                        ${ row.rank || row.profession_1 || row.profession_2 ? `
-                            <li>
-                                <span class="small text-muted">
-                                    ${ row.rank         ? 'Rank ' + row.rank + (row.profession_1 || row.profession_2 ? ',' : '') : '' }
-                                    ${ row.profession_1 ? row.profession_1 + (row.profession_2 ? ',' : '') : '' }
-                                    ${ row.profession_2 ? row.profession_2 : '' }
-                                </span>
-                            </li>` : `` }
-                        ${ showEdit ?
-                            `
-                            ${ row.is_received_unlocked ? `<li class="list-inline-item small text-warning" title="To lock, edit the member that owns this character">loot unlocked</li>` : `` }
-                            ${ row.is_wishlist_unlocked ? `<li class="list-inline-item small text-warning" title="To lock, edit the member that owns this character">wishlist unlocked</li>` : `` }
-                            ` : `` }
-                    </ul>`;
+                            ${ row.raid_group_name || row.is_alt
+                                ? `<li class="small">
+                                    <ul class="list-inline">
+                                        ${ row.raid_group_name ? `<li class="list-inline-item">
+                                            <span class="font-weight-medium d-inline">
+                                                <span class="role-circle-small" style="background-color:${ getColorFromDec(parseInt(row.raid_group_color)) }"></span>
+                                                ${ row.raid_group_name ? row.raid_group_name : '' }
+                                            </span></li>` : ``}
+                                        ${ row.is_alt ? `<li class="list-inline-item"><span class="text-warning font-weight-bold">${localeAlt}</span></li>` : '' }
+                                    </ul>`
+                                : `` }
+
+                            ${ (!guild.is_attendance_hidden && (row.attendance_percentage || row.raid_count || row.benched_count))
+                                ? `<li class="small">
+                                    <ul class="list-inline">
+                                        ${ row.raid_count && typeof row.attendance_percentage === 'number' ? `<li class="list-inline-item ${ getAttendanceColor(row.attendance_percentage) }" title="attendance">${ Math.round(row.attendance_percentage * 100) }%</li>` : '' }
+                                        ${ row.raid_count ? `<li class="list-inline-item text-muted">${ row.raid_count }r</li>` : ``}
+                                        ${ row.benched_count ? `<li class="list-inline-item text-muted">benched ${ row.benched_count }x</li>` : ``}
+                                    </ul>
+                                </li>`
+                                : `` }
+
+                            ${ showEdit ?
+                                `
+                                ${ row.is_received_unlocked ? `<li class="list-inline-item small text-warning" title="To lock, edit the member that owns this character">loot unlocked</li>` : `` }
+                                ${ row.is_wishlist_unlocked ? `<li class="list-inline-item small text-warning" title="To lock, edit the member that owns this character">wishlist unlocked</li>` : `` }
+                                ` : `` }
+                        </ul>`;
+                    },
+                    // Sort by the value in data; not the render
+                    sort: function (data, type, row) {return data;},
                 },
                 visible : true,
                 width   : "250px",
@@ -213,7 +249,7 @@ function createTable() {
 
                         if (showListHeader) {
                             if (wishlistNames && wishlistNames[wishlistNumber]) {
-                                header = wishlistNames[wishlistNumber];
+                                header = wishlistNames[wishlistNumber - 1];
                             } else {
                                 header = headerWishlist + ' ' + wishlistNumber;
                             }
@@ -363,7 +399,7 @@ function createTable() {
                 data   : "discord_username",
                 render : function (data, type, row) {
                     return (row.discord_username ? row.discord_username : null);
-                },
+            },
                 visible : false,
             },
             {
@@ -384,16 +420,28 @@ function createTable() {
                 visible    : false,
                 searchable : false,
             },
+            {
+                title  : "Role",
+                data   : "character",
+                render : function (data, type, row) {
+                    return `${row.archetype ? row.archetype : ''} ${row.sub_archetype ? row.sub_archetype : ''}`;
+                },
+                visible : false,
+                width   : "20px",
+                className : "width-20 fixed-width",
+            },
         ],
         order  : [], // Disable initial auto-sort; relies on server-side sorting
         paging : false,
-        fixedHeader : true, // Header row sticks to top of window when scrolling down
+        fixedHeader : {  // Header row sticks to top of window when scrolling down
+            headerOffset: 0,
+        },
         drawCallback : function () {
             callRosterHandlers();
         },
         initComplete: function () {
             // Columns that we want to filter by.
-            const filterColumns = [colClass, colRaidGroup];
+            const filterColumns = [colArchetype, colClass, colRaidGroup];
 
             // For each column, set up a filter
             this.api().columns().every(function (index) {
@@ -405,7 +453,10 @@ function createTable() {
                 let select2 = null; // Initialize this beside select1 if we want a secondary sort for the same column
 
                 // Based on the current column, identify the relevant filter input
-                if (index == colClass) {
+                if (index == colArchetype) {
+                    select1 = $("#archetype_filter");
+                    select2 = null;
+                } else if (index == colClass) {
                     select1 = $("#class_filter");
                     select2 = null;
                 } else if (index == colRaidGroup) {
@@ -436,6 +487,7 @@ function createTable() {
                             }
 
                             column.search(val ? val : '', true, false).draw();
+
                         }).change();
                     }
                 }
@@ -483,8 +535,8 @@ function addInstanceFilterHandlers() {
         let instanceIds = $("#instance_filter").val();
         if (instanceIds.length) {
             // Show all items, then remove the visible/hidden filters; they interfere with this filter.
-            allItemsVisible = false;
-            $(".js-show-all-clipped-items").click();
+            allItemsVisible = true;
+            reapplyItemVisibility();
             $(".js-show-all-clipped-items").hide();
             $(".js-show-clipped-items").hide();
             $(".js-hide-clipped-items").hide();
@@ -506,12 +558,15 @@ function addInstanceFilterHandlers() {
             $("li.js-has-instance").show();
 
             // Reset the visible/hidden filters to their default state.
-            allItemsVisible = true;
-            $(".js-show-all-clipped-items").click();
+            allItemsVisible = false;
+            reapplyItemVisibility();
             $(".js-show-all-clipped-items").show();
             $(".js-show-clipped-items").show();
             $(".js-hide-clipped-items").hide();
         }
+
+        reapplyStrikethroughItemsFilter();
+        reapplyOffspecItemsFilter();
     });
 }
 
@@ -636,20 +691,69 @@ function getNotes(data, type, row) {
 
 function hideOffspecItems() {
     $("[data-offspec='1']").hide();
+    $(".js-hide-offspec-items").addClass("font-weight-bold");
 }
 
 function showOffspecItems() {
     $("[data-offspec='1']:not(.js-clipped-item)").show();
+    $(".js-hide-offspec-items").removeClass("font-weight-bold");
 }
 
 function hideStrikethroughItems() {
     $("[data-type='prio']").children(".font-strikethrough").parent().hide();
     $("[data-type='wishlist']").children(".font-strikethrough").parent().hide();
+    $(".js-hide-strikethrough-items").addClass("font-weight-bold");;
 }
 
 function showStrikethroughItems() {
     $("[data-type='prio']:not(.js-clipped-item)").children(".font-strikethrough").parent().show();
     $("[data-type='wishlist']:not(.js-clipped-item)").children(".font-strikethrough").parent().show();
+    $(".js-hide-strikethrough-items").removeClass("font-weight-bold");;
+}
+
+function reapplyStrikethroughItemsFilter() {
+    if (strikethroughVisible) {
+        showStrikethroughItems();
+    } else {
+        hideStrikethroughItems();
+    }
+}
+function reapplyOffspecItemsFilter() {
+    if (offspecVisible) {
+        showOffspecItems();
+    } else {
+        hideOffspecItems();
+    }
+}
+
+function toggleStrikethroughItems() {
+    if (strikethroughVisible) {
+        strikethroughVisible = false;
+        hideStrikethroughItems();
+    } else {
+        strikethroughVisible = true;
+        showStrikethroughItems();
+    }
+}
+
+function toggleOffspecItems() {
+    if (offspecVisible) {
+        offspecVisible = false;
+        hideOffspecItems();
+    } else {
+        offspecVisible = true;
+        showOffspecItems();
+    }
+}
+
+// Sets items visibility to whatever the last setting was
+function reapplyItemVisibility() {
+    // We should set visibility based on the previous setting.
+    if (allItemsVisible) {
+        showAllItems();
+    } else {
+        resetItemVisibility();
+    }
 }
 
 function resetItemVisibility() {
@@ -670,12 +774,9 @@ function callRosterHandlers() {
         parseMarkdown();
         trackTimestamps();
 
-        // We should set visibility based on the previous setting.
-        if (allItemsVisible) {
-            showAllItems();
-        } else {
-            resetItemVisibility();
-        }
+        // Applies instance filter, reapplies filters for OS, strikethroughs, and
+        // whether or not all items should be shown.
+        $("#instance_filter").change();
 
         addTooltips();
     }, 500); // 0.5s delay

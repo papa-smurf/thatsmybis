@@ -1,3 +1,55 @@
+const ARCHETYPE_DPS  = 'DPS';
+const ARCHETYPE_HEAL = 'Heal';
+const ARCHETYPE_TANK = 'Tank';
+
+const SUB_ARCHETYPE_DPS_CASTER   = 'Caster DPS';
+const SUB_ARCHETYPE_DPS_PHYSICAL = 'Physical DPS';
+
+const CLASS_DEATH_KNIGHT = 'Death Knight';
+const CLASS_DRUID        = 'Druid';
+const CLASS_HUNTER       = 'Hunter';
+const CLASS_MAGE         = 'Mage';
+const CLASS_PALADIN      = 'Paladin';
+const CLASS_PRIEST       = 'Priest';
+const CLASS_ROGUE        = 'Rogue';
+const CLASS_SHAMAN       = 'Shaman';
+const CLASS_WARLOCK      = 'Warlock';
+const CLASS_WARRIOR      = 'Warrior';
+
+const SPEC_DEATH_KNIGHT_BLOOD  = 'Blood';
+const SPEC_DEATH_KNIGHT_FROST  = 'Frost (DK)';
+const SPEC_DEATH_KNIGHT_UNHOLY = 'Unholy';
+const SPEC_DRUID_BALANCE       = 'Balance';
+const SPEC_DRUID_FERAL         = 'Feral';
+const SPEC_DRUID_RESTO         = 'Resto (Druid)';
+const SPEC_HUNTER_BEAST        = 'Beast';
+const SPEC_HUNTER_MARKSMAN     = 'Marksman';
+const SPEC_HUNTER_CUNNING      = 'Cunning';
+const SPEC_HUNTER_FEROCITY     = 'Ferocity';
+const SPEC_HUNTER_TENACTIY     = 'Tenacity';
+const SPEC_HUNTER_SURVIVAL     = 'Survival';
+const SPEC_MAGE_ARCANE         = 'Arcane';
+const SPEC_MAGE_FIRE           = 'Fire';
+const SPEC_MAGE_FROST          = 'Frost';
+const SPEC_PALADIN_COMBAT      = 'Retribution';
+const SPEC_PALADIN_HOLY        = 'Holy (Pally)';
+const SPEC_PALADIN_PROTECTION  = 'Prot (Pally)';
+const SPEC_PRIEST_DISCIPLINE   = 'Discipline';
+const SPEC_PRIEST_HOLY         = 'Holy (Priest)';
+const SPEC_PRIEST_SHADOW       = 'Shadow';
+const SPEC_ROGUE_ASSASSIN      = 'Assassination';
+const SPEC_ROGUE_COMBAT        = 'Combat';
+const SPEC_ROGUE_SUBTLETY      = 'Subtlety';
+const SPEC_SHAMAN_ELEMENTAL    = 'Elemental';
+const SPEC_SHAMAN_ENHANCE      = 'Enhancement';
+const SPEC_SHAMAN_RESTO        = 'Resto (Shammy)';
+const SPEC_WARLOCK_AFFLICTION  = 'Affliction';
+const SPEC_WARLOCK_DESTRO      = 'Destruction';
+const SPEC_WARLOCK_DEMON       = 'Demonology';
+const SPEC_WARRIOR_ARMS        = 'Arms';
+const SPEC_WARRIOR_FURY        = 'Fury';
+const SPEC_WARRIOR_PROT        = 'Prot (War)';
+
 // For knowing what kind of tier style to display
 const TIER_MODE_NUM = 'num';
 const TIER_MODE_S   = 's';
@@ -41,11 +93,27 @@ const SLOT_RANGED_2         = 26; // crossbow, gun, wand
 // 27; //// nothing (after my filters, I found nothing in here)
 const SLOT_RELIC            = 28; // totem/idol/libram
 
+const WARCRAFTLOGS_CLASSES = {
+    1: {"id": 1, "name": "Death Knight", "slug": "dk", "specs": {1: {"id": 1, "name": "Blood"}, 2: {"id": 2, "name": "Frost"}, 3: {"id": 3, "name": "Unholy"}}},
+    2: {"id": 2, "name": "Druid", "slug": "druid", "specs": {1: {"id": 1, "name": "Balance"}, 2: {"id": 2, "name": "Feral"}, 3: {"id": 3, "name": "Guardian"}, 4: {"id": 4, "name": "Restoration"}}},
+    3: {"id": 3, "name": "Hunter", "slug": "hunter", "specs": {1: {"id": 1, "name": "Beast Mastery"}, 2: {"id": 2, "name": "Marksmanship"}, 3: {"id": 3, "name": "Survival"}}},
+    4: {"id": 4, "name": "Mage", "slug": "mage", "specs": {1: {"id": 1, "name": "Arcane"}, 2: {"id": 2, "name": "Fire"}, 3: {"id": 3, "name": "Frost"}}},
+    5: {"id": 5, "name": "Monk", "slug": "monk", "specs": {1: {"id": 1, "name": "Brewmaster"}, 2: {"id": 2, "name": "Mistweaver"}, 3: {"id": 3, "name": "Windwalker"}}},
+    6: {"id": 6, "name": "Paladin", "slug": "paladin", "specs": {1: {"id": 1, "name": "Holy"}, 2: {"id": 2, "name": "Protection"}, 3: {"id": 3, "name": "Retribution"}}},
+    7: {"id": 7, "name": "Priest", "slug": "priest", "specs": {1: {"id": 1, "name": "Discipline"}, 2: {"id": 2, "name": "Holy"}, 3: {"id": 3, "name": "Shadow"}}},
+    8: {"id": 8, "name": "Rogue", "slug": "rogue", "specs": {1: {"id": 1, "name": "Assassination"}, 2: {"id": 2, "name": "Combat"}, 3: {"id": 3, "name": "Subtlety"}, 4: {"id": 4, "name": "Outlaw"}}},
+    9: {"id": 9, "name": "Shaman", "slug": "shaman", "specs": {1: {"id": 1, "name": "Elemental"}, 2: {"id": 2, "name": "Enhancement"}, 3: {"id": 3, "name": "Restoration"}}},
+    10: {"id": 10, "name": "Warlock", "slug": "warlock", "specs": {1: {"id": 1, "name": "Affliction"}, 2: {"id": 2, "name": "Demonology"}, 3: {"id": 3, "name": "Destruction"}}},
+    11: {"id": 11, "name": "Warrior", "slug": "warrior", "specs": {1: {"id": 1, "name": "Arms"}, 2: {"id": 2, "name": "Fury"}, 3: {"id": 3, "name": "Protection"}, 4: {"id": 4, "name": "Gladiator"}}},
+    12: {"id": 12, "name": "Demon Hunter", "slug": "dh", "specs": {1: {"id": 1, "name": "Havoc"}, 2: {"id": 2, "name": "Vengeance"}}}
+};
+
 // How often to update timestamps
 var timestampCheckRate = 30000;
 
 // For keeping track of the intervals updating times
 var timestampUpdateInterval = null;
+
 
 // Add CSRF token to all request headers
 $.ajaxSetup({
@@ -227,9 +295,26 @@ function decToHex(number) {
     return parseInt(number).toString(16);
 }
 
+// Delete a cookie from the browser document
+function deleteCookie (name, path) {
+    setCookie(name, '', -1, path);
+}
+
 // Take a jquery element, make that element visually flash to get the user's attention
 function flashElement(element) {
     element.fadeTo(100, 0.3, function() { $(this).fadeTo(500, 1.0); });
+}
+
+function getArchetypeIcon(archetype) {
+    if (archetype === ARCHETYPE_DPS) {
+        return 'fas fa-fw fa-bow-arrow text-dps';
+    } else if (archetype === ARCHETYPE_HEAL) {
+        return 'fas fa-fw fa-plus-circle text-healer';
+    } else if (archetype === ARCHETYPE_TANK) {
+        return 'fas fa-fw fa-shield text-tank';
+    } else {
+        return 'fas fa-fw fa-map-marker-question text-muted';
+    }
 }
 
 // Based on attendance percentage, return a CSS color class
@@ -266,6 +351,14 @@ function getColorFromDec(color) {
         color = 'FFF';
     }
     return '#' + color;
+}
+
+// Get a cookie from the browser document
+function getCookie (name) {
+    return document.cookie.split('; ').reduce((r, v) => {
+        const parts = v.split('=')
+        return parts[0] === name ? decodeURIComponent(parts[1]) : r
+    }, '');
 }
 
 // Based on the guild's tier mode setting, return a tier label
@@ -451,6 +544,12 @@ function rgbToHex (rgb) {
     return hex;
 };
 
+// Set a cookie in the browser document
+function setCookie (name, value, days = 7, path = '/') {
+    const expires = new Date(Date.now() + days * 864e5).toUTCString();
+    document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=' + path;
+}
+
 // Turn a url into a slug url!
 function slug(string) {
     let theChosenCharacter = "-"; // You are the Chosen One
@@ -599,6 +698,10 @@ function trackTimestamps(rate = timestampCheckRate) {
             }
         });
     }, rate);
+}
+
+function ucfirst(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 /**

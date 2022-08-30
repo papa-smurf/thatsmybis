@@ -59,7 +59,11 @@ class Character extends BaseModel
         'display_profession2',
         'display_race',
         'display_spec',
+        'sub_archetype',
     ];
+
+    const FACTION_BEST  = 'Horde';
+    const FACTION_WORST = 'Alliance';
 
     // Each constant must be unique among their group. They are used as keys.
     const RACE_BLOOD_ELF = 'Blood Elf';
@@ -99,6 +103,9 @@ class Character extends BaseModel
     const ARCHETYPE_DPS  = 'DPS';
     const ARCHETYPE_HEAL = 'Heal';
     const ARCHETYPE_TANK = 'Tank';
+
+    const ARCHETYPE_DPS_CASTER   = 'Caster';
+    const ARCHETYPE_DPS_PHYSICAL = 'Physical';
 
     const SPEC_DEATH_KNIGHT_BLOOD  = 'Blood';
     const SPEC_DEATH_KNIGHT_FROST  = 'Frost (DK)';
@@ -397,6 +404,7 @@ class Character extends BaseModel
             ->leftJoin('raids', function ($join) use ($raidGroupIdFilter) {
                 $join = $join->on('raids.guild_id', 'characters.guild_id')
                     ->whereRaw('`raids`.`date` BETWEEN (NOW() - INTERVAL `guilds`.`attendance_decay_days` DAY) AND (NOW() - INTERVAL ' . env('ATTENDANCE_DELAY_HOURS', 1) . ' HOUR)')
+                    ->where('raids.ignore_attendance', 0)
                     ->whereNull('raids.cancelled_at');
 
                 // User has a sitewide filter on the attendance stats that they want to see.
@@ -424,6 +432,7 @@ class Character extends BaseModel
             ->leftJoin('raids', function ($join) use ($raidGroupIdFilter) {
                 $join = $join->on('raids.guild_id', 'characters.guild_id')
                     ->whereRaw('`raids`.`date` BETWEEN (NOW() - INTERVAL `guilds`.`attendance_decay_days` DAY) AND (NOW() - INTERVAL ' . env('ATTENDANCE_DELAY_HOURS', 1) . ' HOUR)')
+                    ->where('raids.ignore_attendance', 0)
                     ->whereNull('raids.cancelled_at');
 
                 if ($raidGroupIdFilter) {
@@ -460,41 +469,131 @@ class Character extends BaseModel
         return $query;
     }
 
-    public function getDisplayArchetypeAttribute()
-    {
-        return $this->archetype ? self::archetypes()[$this->archetype] : null;
+    // try to pick a defaul archetype if none is set
+    public function getArchetypeAttribute() {
+        if ($this->attributes['archetype']) {
+            return $this->attributes['archetype'];
+        }
+
+        // No archetype is set.
+        // For classes that only have one archetype, return that one archetype.
+        if ($this->class) {
+            if ($this->class === self::CLASS_DEATH_KNIGHT) {
+                return self::ARCHETYPE_DPS;
+            }
+            if ($this->class === self::CLASS_DRUID) {
+                return null;
+            }
+            if ($this->class === self::CLASS_HUNTER) {
+                return self::ARCHETYPE_DPS;
+            }
+            if ($this->class === self::CLASS_MAGE) {
+                return self::ARCHETYPE_DPS;
+            }
+            if ($this->class === self::CLASS_PALADIN) {
+                return null;
+            }
+            if ($this->class === self::CLASS_PRIEST) {
+                return null;
+            }
+            if ($this->class === self::CLASS_ROGUE) {
+                return self::ARCHETYPE_DPS;
+            }
+            if ($this->class === self::CLASS_SHAMAN) {
+                return null;
+            }
+            if ($this->class === self::CLASS_WARLOCK) {
+                return self::ARCHETYPE_DPS;
+            }
+            if ($this->class === self::CLASS_WARRIOR) {
+                return null;
+            }
+        } else {
+            return null;
+        }
     }
 
-    public function getDisplayClassAttribute()
-    {
+    public function getDisplayArchetypeAttribute() {
+        if ($this->archetype) {
+            return self::archetypes()[$this->archetype];
+        } else {
+            return null;
+        }
+    }
+
+    public function getDisplayClassAttribute() {
         return $this->class ? self::classes()[$this->class] : null;
     }
 
-    public function getDisplayProfession1Attribute()
-    {
+    public function getDisplayProfession1Attribute() {
         return $this->profession_1 ? self::professions()[$this->profession_1] : null;
     }
 
-    public function getDisplayProfession2Attribute()
-    {
+    public function getDisplayProfession2Attribute() {
         return $this->profession_2 ? self::professions()[$this->profession_2] : null;
     }
 
-    public function getDisplayRaceAttribute()
-    {
-        return $this->race ? self::races()[$this->race] : null;
+    public function getDisplayRaceAttribute() {
+        return $this->race ? self::races()[$this->race]['name'] : null;
     }
 
-    public function getDisplaySpecAttribute()
-    {
+    public function getDisplaySpecAttribute() {
         return $this->spec_label ? $this->spec_label : ($this->spec ? self::specs()[$this->spec]['name'] : null);
+    }
+
+    // Differentiates between caster DPS and physical DPS.
+    public function getSubArchetypeAttribute() {
+        if ($this->class) {
+            if ($this->class === self::CLASS_DEATH_KNIGHT) {
+                return self::ARCHETYPE_DPS_PHYSICAL;
+            }
+            if ($this->class === self::CLASS_DRUID && $this->archetype === self::ARCHETYPE_DPS && $this->spec) {
+                if ($this->spec === self::SPEC_DRUID_BALANCE) {
+                    return self::ARCHETYPE_DPS_CASTER;
+                } else {
+                    // If you are a DPS Druid that isn't Balance; you must be Feral.
+                    return self::ARCHETYPE_DPS_PHYSICAL;
+                }
+            }
+            if ($this->class === self::CLASS_HUNTER) {
+                return self::ARCHETYPE_DPS_PHYSICAL;
+            }
+            if ($this->class === self::CLASS_MAGE) {
+                return self::ARCHETYPE_DPS_CASTER;
+            }
+            if ($this->class === self::CLASS_PALADIN && $this->archetype === self::ARCHETYPE_DPS) {
+                return self::ARCHETYPE_DPS_PHYSICAL;
+            }
+            if ($this->class === self::CLASS_PRIEST && $this->archetype === self::ARCHETYPE_DPS) {
+                return self::ARCHETYPE_DPS_CASTER;
+            }
+            if ($this->class === self::CLASS_ROGUE) {
+                return self::ARCHETYPE_DPS_PHYSICAL;
+            }
+            if ($this->class === self::CLASS_SHAMAN && $this->archetype === self::ARCHETYPE_DPS) {
+                if ($this->spec === self::SPEC_SHAMAN_ENHANCE) {
+                    return self::ARCHETYPE_DPS_PHYSICAL;
+                } else {
+                    // If you are a DPS Shaman that isn't Enhancement; you must be Elemental or some other kind of caster.
+                    return self::ARCHETYPE_DPS_CASTER;
+                }
+            }
+            if ($this->class === self::CLASS_WARLOCK) {
+                return self::ARCHETYPE_DPS_CASTER;
+            }
+            if ($this->class === self::CLASS_WARRIOR && $this->archetype === self::ARCHETYPE_DPS) {
+                return self::ARCHETYPE_DPS_PHYSICAL;
+            }
+        } else {
+            return null;
+        }
     }
 
     /**
      * Takes in a collection of characters that don't have attendance, and a collection
      * of characters that do have attendance. Merge the attendance into the former collection.
      */
-    public static function mergeAttendance($characters, $charactersWithAttendance) {
+    static public function mergeAttendance($characters, $charactersWithAttendance) {
         if ($characters) {
             foreach ($characters as $character) {
                 $attendanceCharacter = $charactersWithAttendance->where('id', $character->id)->first();
@@ -516,6 +615,22 @@ class Character extends BaseModel
         ];
     }
 
+    static public function extendedArchetypes() {
+        return [
+            self::ARCHETYPE_DPS  => __('DPS'),
+            self::ARCHETYPE_DPS_CASTER => __('Caster DPS'),
+            self::ARCHETYPE_DPS_PHYSICAL => __('Physical DPS'),
+            self::ARCHETYPE_HEAL => __('Healer'),
+            self::ARCHETYPE_TANK => __('Tank'),
+        ];
+    }
+
+    static public function factions() {
+        return [
+            self::FACTION_BEST  => __('Horde'),
+            self::FACTION_WORST => __('Alliance'),
+        ];
+    }
 
     static public function classes($expansionId = 0) {
         switch ($expansionId) {
@@ -613,42 +728,42 @@ class Character extends BaseModel
         switch ($expansionId) {
             case 1: // Classic
                 return [
-                    self::RACE_ORC       => __('Orc'),
-                    self::RACE_TAUREN    => __('Tauren'),
-                    self::RACE_TROLL     => __('Troll'),
-                    self::RACE_UNDEAD    => __('Undead'),
-                    self::RACE_DWARF     => __('Dwarf'),
-                    self::RACE_GNOME     => __('Gnome'),
-                    self::RACE_HUMAN     => __('Human'),
-                    self::RACE_NIGHT_ELF => __('Night Elf'),
+                    self::RACE_ORC       => ['name' => __('Orc'),    'faction' => self::FACTION_BEST],
+                    self::RACE_TAUREN    => ['name' => __('Tauren'), 'faction' => self::FACTION_BEST],
+                    self::RACE_TROLL     => ['name' => __('Troll'),  'faction' => self::FACTION_BEST],
+                    self::RACE_UNDEAD    => ['name' => __('Undead'), 'faction' => self::FACTION_BEST],
+                    self::RACE_DWARF     => ['name' => __('Dwarf'),     'faction' => self::FACTION_WORST],
+                    self::RACE_GNOME     => ['name' => __('Gnome'),     'faction' => self::FACTION_WORST],
+                    self::RACE_HUMAN     => ['name' => __('Human'),     'faction' => self::FACTION_WORST],
+                    self::RACE_NIGHT_ELF => ['name' => __('Night Elf'), 'faction' => self::FACTION_WORST],
                 ];
                 break;
             case 2: // TBC
                 return [
-                    self::RACE_BLOOD_ELF => __('Blood Elf'),
-                    self::RACE_ORC       => __('Orc'),
-                    self::RACE_TAUREN    => __('Tauren'),
-                    self::RACE_TROLL     => __('Troll'),
-                    self::RACE_UNDEAD    => __('Undead'),
-                    self::RACE_DRAENEI   => __('Draenei'),
-                    self::RACE_DWARF     => __('Dwarf'),
-                    self::RACE_GNOME     => __('Gnome'),
-                    self::RACE_HUMAN     => __('Human'),
-                    self::RACE_NIGHT_ELF => __('Night Elf'),
+                    self::RACE_BLOOD_ELF => ['name' => __('Blood Elf'), 'faction' => self::FACTION_BEST],
+                    self::RACE_ORC       => ['name' => __('Orc'),       'faction' => self::FACTION_BEST],
+                    self::RACE_TAUREN    => ['name' => __('Tauren'),    'faction' => self::FACTION_BEST],
+                    self::RACE_TROLL     => ['name' => __('Troll'),     'faction' => self::FACTION_BEST],
+                    self::RACE_UNDEAD    => ['name' => __('Undead'),    'faction' => self::FACTION_BEST],
+                    self::RACE_DRAENEI   => ['name' => __('Draenei'),   'faction' => self::FACTION_WORST],
+                    self::RACE_DWARF     => ['name' => __('Dwarf'),     'faction' => self::FACTION_WORST],
+                    self::RACE_GNOME     => ['name' => __('Gnome'),     'faction' => self::FACTION_WORST],
+                    self::RACE_HUMAN     => ['name' => __('Human'),     'faction' => self::FACTION_WORST],
+                    self::RACE_NIGHT_ELF => ['name' => __('Night Elf'), 'faction' => self::FACTION_WORST],
                 ];
                 break;
             default: // WoTLK
                 return  [
-                    self::RACE_BLOOD_ELF => __('Blood Elf'),
-                    self::RACE_ORC       => __('Orc'),
-                    self::RACE_TAUREN    => __('Tauren'),
-                    self::RACE_TROLL     => __('Troll'),
-                    self::RACE_UNDEAD    => __('Undead'),
-                    self::RACE_DRAENEI   => __('Draenei'),
-                    self::RACE_DWARF     => __('Dwarf'),
-                    self::RACE_GNOME     => __('Gnome'),
-                    self::RACE_HUMAN     => __('Human'),
-                    self::RACE_NIGHT_ELF => __('Night Elf'),
+                    self::RACE_BLOOD_ELF => ['name' => __('Blood Elf'), 'faction' => self::FACTION_BEST],
+                    self::RACE_ORC       => ['name' => __('Orc'),       'faction' => self::FACTION_BEST],
+                    self::RACE_TAUREN    => ['name' => __('Tauren'),    'faction' => self::FACTION_BEST],
+                    self::RACE_TROLL     => ['name' => __('Troll'),     'faction' => self::FACTION_BEST],
+                    self::RACE_UNDEAD    => ['name' => __('Undead'),    'faction' => self::FACTION_BEST],
+                    self::RACE_DRAENEI   => ['name' => __('Draenei'),   'faction' => self::FACTION_WORST],
+                    self::RACE_DWARF     => ['name' => __('Dwarf'),     'faction' => self::FACTION_WORST],
+                    self::RACE_GNOME     => ['name' => __('Gnome'),     'faction' => self::FACTION_WORST],
+                    self::RACE_HUMAN     => ['name' => __('Human'),     'faction' => self::FACTION_WORST],
+                    self::RACE_NIGHT_ELF => ['name' => __('Night Elf'), 'faction' => self::FACTION_WORST],
                 ];
                 break;
         }
