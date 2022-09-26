@@ -158,7 +158,7 @@ class Guild extends BaseModel
     public function items() {
         return $this->belongsToMany(Item::class, 'guild_items', 'guild_id', 'item_id')
             ->withTimeStamps()
-            ->withPivot(['created_by', 'updated_by', 'note', 'priority', 'tier'])
+            ->withPivot(['created_by', 'updated_by', 'note', 'priority', 'officer_note', 'tier'])
             ->orderBy('items.name');
     }
 
@@ -187,7 +187,7 @@ class Guild extends BaseModel
 
     /* Various functions */
 
-    static public function factions() {
+    static public function getFactions() {
         return [
             self::FACTION_BEST  => self::FACTION_BEST,
             self::FACTION_WORST => self::FACTION_WORST,

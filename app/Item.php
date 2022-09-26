@@ -23,6 +23,7 @@ class Item extends BaseModel
         'source',
         'profession',
         'quality',
+        'is_heroic',
         'display_id',
         'inventory_type',
         'allowable_class',
@@ -119,7 +120,7 @@ class Item extends BaseModel
     public function guilds() {
         return $this->belongsToMany(Guild::class, 'guild_items', 'item_id', 'guild_id')
             ->withTimeStamps()
-            ->withPivot(['created_by', 'updated_by', 'note', 'priority']);
+            ->withPivot(['created_by', 'updated_by', 'note', 'priority', 'officer_note']);
     }
 
     public function itemSources() {

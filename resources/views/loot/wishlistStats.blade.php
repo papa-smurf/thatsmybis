@@ -119,11 +119,13 @@
                                                                 <li class="mb-2 text-tier-{{ $loop->iteration <= 5 ? '1' : ($loop->iteration <= 10 ? '2' : ($loop->iteration <= 20 ? '3' : ($loop->iteration <= 30 ? '4' : '5'))) }}">
                                                                     @include('partials/item', ['wowheadLink' => false])
                                                                     <small class="text-muted">
-                                                                        <span class="font-weight-bold text-{{ strtolower($class) }}">
+                                                                        <span class="font-weight-bold text-{{ strtolower($class) }}" title="{{ __(':number players wishlisted this', ['number' => $item->wishlist_count]) }}" >
                                                                             {{ $item->wishlist_count > 0 ? numToKs($item->wishlist_count) : '' }}
                                                                         </span>
                                                                         <em>
-                                                                            {{ $item->instance_short_name }}
+                                                                            <span title="{{ property_exists($item, 'instance_name') ? $item->instance_name : null }}">
+                                                                                {{ $item->instance_short_name }}
+                                                                            </span>
                                                                         </em>
                                                                     </small>
                                                                 </li>

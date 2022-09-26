@@ -33,7 +33,7 @@ class ItemController extends Controller
 
         $guild->load(['raidGroups']);
 
-        $instance = Instance::where('slug', $instanceSlug)->firstOrFail();
+        $instance = Instance::where('slug', $instanceSlug)->with('itemSources')->firstOrFail();
 
         $characterFields = [
             'characters.id',
@@ -77,15 +77,17 @@ class ItemController extends Controller
             Cache::forget($cacheKey);
         }
 
-        $items = Cache::remember($cacheKey, env('CACHE_INSTANCE_ITEMS_SECONDS', 5), function () use ($guild, $instance, $currentMember, $characterFields, $showPrios, $showWishlist, $viewPrioPermission) {
+        $items = Cache::remember($cacheKey, env('CACHE_INSTANCE_ITEMS_SECONDS', 5), function () use ($guild, $instance, $currentMember, $characterFields, $showPrios, $showWishlist, $showOfficerNote, $viewPrioPermission) {
             $query = Item::select([
                     'items.id',
                     'items.item_id',
                     'items.name',
                     'items.quality',
                     'item_sources.name    AS source_name',
+                    'item_sources.slug    AS source_slug',
                     'guild_items.note     AS guild_note',
                     'guild_items.priority AS guild_priority',
+                    ($showOfficerNote ? 'guild_items.officer_note AS guild_officer_note' : DB::raw('null AS guild_officer_note')),
                     'guild_items.tier     AS guild_tier',
                 ])
                 ->leftJoin('item_item_sources', 'item_item_sources.item_id', '=', 'items.item_id')
@@ -270,6 +272,7 @@ class ItemController extends Controller
                             'guild_items.updated_by',
                             'guild_items.note',
                             'guild_items.priority',
+                            'guild_items.officer_note',
                             'guild_items.tier',
                         ])
                         ->where('guilds.id', $guild->id);
@@ -345,15 +348,17 @@ class ItemController extends Controller
         }
 
         $notes = [];
-        $notes['note']     = null;
-        $notes['priority'] = null;
-        $notes['tier']     = null;
+        $notes['note']         = null;
+        $notes['priority']     = null;
+        $notes['officer_note'] = null;
+        $notes['tier']         = null;
 
         // If this guild has notes for this item, prep them for ease of access in the view
         if ($item->guilds->count() > 0) {
-            $notes['note']     = $item->guilds->first()->note;
-            $notes['priority'] = $item->guilds->first()->priority;
-            $notes['tier']     = $item->guilds->first()->tier;
+            $notes['note']         = $item->guilds->first()->note;
+            $notes['priority']     = $item->guilds->first()->priority;
+            $notes['officer_note'] = $showOfficerNote ? $item->guilds->first()->officer_note : null;
+            $notes['tier']         = $item->guilds->first()->tier;
         }
 
         $showEdit = false;
@@ -464,6 +469,8 @@ class ItemController extends Controller
             $domain = 'classic';
         } else if ($expansionId === 2) {
             $domain = 'tbc';
+        } else if ($expansionId === 3) {
+            $domain = 'wotlk';
         }
 
         $locale = App::getLocale();
@@ -474,11 +481,15 @@ class ItemController extends Controller
         }
 
         try {
-            // Suppressing warnings with the error control operator @ (if the id doesn't exist, it will fail to open stream)
-            $json = json_decode(file_get_contents('https://' . $locale . $domain . '.wowhead.com/tooltip/item/' . (int)$itemId));
+            if ($expansionId === 3) {
+                $json = json_decode(file_get_contents('https://' . $locale . 'wowhead.com/' . $domain . '/tooltip/item/' . (int)$itemId));
+            } else {
+                // Suppressing warnings with the error control operator @ (if the id doesn't exist, it will fail to open stream)
+                $json = json_decode(file_get_contents('https://' . $locale . $domain . '.wowhead.com/tooltip/item/' . (int)$itemId));
+            }
 
             // Fix link - Not using this because I wasn't easily able to get wowhead's script to not parse the link and do stupid crap to it
-            $json->tooltip = str_replace('href="/', 'href="https://' . $locale . $domain . '.wowhead.com/', $json->tooltip);
+            // $json->tooltip = str_replace('href="/', 'href="https://' . $locale . $domain . '.wowhead.com/', $json->tooltip);
 
             // Remove links
             $json->tooltip = str_replace('<a ', '<span ', $json->tooltip);

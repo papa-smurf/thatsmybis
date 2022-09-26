@@ -48,18 +48,25 @@
                                                             </a>
                                                         </li>
                                                     @endforeach
-                                                @else
-                                                    <span class="text-muted">
-                                                        {{ $expansion->name_long }}
-                                                    </span>
+                                                @endif
+                                                <li class="list-inline-item">
+                                                    @if (!$matchingGuilds->count())
+                                                        <span class="text-muted">
+                                                            {{ $expansion->name_long }}
+                                                        </span>
+                                                    @endif
                                                     @if ($expansion->is_enabled)
-                                                        <a href="{{ route('guild.showRegisterExpansion', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'expansionSlug' => $expansion->slug]) }}" class="font-italic small">
-                                                            {{ __("add expansion") }}
+                                                        <a href="{{ route('guild.showRegisterExpansion', ['guildId' => $guild->id, 'guildSlug' => $guild->slug, 'expansionSlug' => $expansion->slug]) }}"
+                                                            class="btn {{ $expansion->id === 3 ? 'btn-info' : 'btn-secondary' }} pt-0 pb-0 pl-1 pr-1"
+                                                        >
+                                                            <span class="small">
+                                                                {{ __("New :expansionName Guild", ['expansionName' => $expansion->name_short]) }}
+                                                            </span>
                                                         </a>
                                                     @else
                                                         <span class="text-muted font-italic small">{{ __("not yet supported") }}</span>
                                                     @endif
-                                                @endif
+                                                </li>
                                             </ul>
                                         </li>
                                     @endforeach
